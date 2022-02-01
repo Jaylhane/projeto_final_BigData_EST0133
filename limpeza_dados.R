@@ -16,11 +16,11 @@ library(lubridate)
 livros <- read.csv("./Conjunto de Dados/books.csv",
                    encoding = "UTF-8",
                    header = TRUE) %>% 
-            select(-bookID, 
-                   -title, 
-                   -isbn, 
-                   -isbn13) %>% 
-            na.omit()
+  select(-bookID, 
+         -title, 
+         -isbn, 
+         -isbn13) %>% 
+  na.omit()
 
 #####Tratando os dados#####
 
@@ -70,7 +70,35 @@ livros <- livros %>%
 
 summary(livros)
 
+# 50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
+
+livros %>% 
+  ggplot(aes(x=average_rating))+
+  geom_histogram(bins = 15)
+
+# e conferindo a quantidade de observações menores de 3 temos: 
+
+livros %>% 
+  filter(average_rating<3) %>% 
+  count()
+
+# dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] 
+# e bom no intervalo de (3,5], uma vez que pelo histograma é percebido ter poucas notas acima de 4 também. 
+
+# Dessa forma, nosso conjunto de dados final é composto por duas categorias: regular e bom. Aplicando no conjunto de dados:
+
+livros <- livros %>% 
+  mutate(
+    book_rating =
+      case_when(average_rating<=3 ~ "Regular",
+                TRUE ~ "Bom")
+  ) %>% 
+  select(-average_rating)
+
 
 #####Salvando os dados atuais#####
 
-write.csv(livros, "./Conjunto de Dados/books_t.csv",fileEncoding = "UTF-8")
+write.csv(livros, 
+          "./Conjunto de Dados/books_t.csv",
+          fileEncoding = "UTF-8",
+          row.names = FALSE)
