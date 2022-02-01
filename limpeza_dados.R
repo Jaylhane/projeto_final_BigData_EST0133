@@ -73,8 +73,10 @@ summary(livros)
 # 50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
 
 livros %>% 
-  ggplot(aes(x=average_rating))+
-  geom_histogram(bins = 15)
+  ggplot(aes(x=average_rating, after_stat(scaled)))+
+  geom_histogram(aes(y=..density..),
+                 bins = 15)+
+  geom_density()
 
 # e conferindo a quantidade de observações menores de 3 temos: 
 
