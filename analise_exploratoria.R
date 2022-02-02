@@ -34,6 +34,7 @@ livros_treino %>%
   select(where(is.numeric)) %>% 
   ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
 
+hist(livros_treino$text_reviews_count)
 # há uma correlação bem forte entre a variável `text_reviews_count` e `ratings_count`
 # o que era esperado já que quem deixa uma nota de avaliação (`rating_count`) 
 # não necessariamente deixa uma resenha (`text_reviews_count`)

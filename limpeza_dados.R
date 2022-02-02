@@ -60,7 +60,7 @@ summary(as.factor(livros$publisher))
 
 livros <- livros %>% 
   mutate(publication_date = mdy(publication_date),
-         average_rating = as.integer(average_rating),
+         average_rating = as.double(average_rating),
          num_pages = as.integer(num_pages),
          book_age = year(today())-year(publication_date),
          month_publication = as.factor(month(publication_date)),
