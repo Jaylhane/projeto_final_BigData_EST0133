@@ -3,6 +3,7 @@
 
 library(tidyverse)
 library(tidymodels)
+library(lubridate)
 
 theme_set(theme_light())
 
@@ -10,11 +11,12 @@ theme_set(theme_light())
 
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
-  mutate_if(is.character,factor) %>% 
+  mutate_if(is.character,factor) %>%
   mutate(month_publication=factor(month_publication),
          year_publication=factor(year_publication),
          book_rating=factor(book_rating,
                             levels = c("Ótimo","Bom","Ruim")))
+ 
 
 #####Separando em Treino e Teste#####
 

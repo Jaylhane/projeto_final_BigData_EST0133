@@ -88,7 +88,7 @@ livros <- livros %>%
                   "English","Other")
            )
          ) %>% 
-  select(-authors, -publication_date, -publisher) %>% 
+  select(-authors, -publisher) %>% 
   na.omit()
 
 summary(livros)
