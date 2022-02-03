@@ -10,11 +10,11 @@ theme_set(theme_light())
 
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
-  mutate(language_code=factor(language_code),
-         month_publication=factor(month_publication),
+  mutate_if(is.character,factor) %>% 
+  mutate(month_publication=factor(month_publication),
          year_publication=factor(year_publication),
          book_rating=factor(book_rating,
-                            levels = c("Bom","Regular")))
+                            levels = c("Ótimo","Bom","Ruim")))
 
 #####Separando em Treino e Teste#####
 
@@ -40,7 +40,12 @@ hist(livros_treino$text_reviews_count)
 # não necessariamente deixa uma resenha (`text_reviews_count`)
 # mas se a pessoa deixou uma resenha ela também deixou uma nota de avaliação. 
 # Há indicios de multicolineariedade entre essas duas variáveis. 
-# Nesse caso remove? 
+# Nesse caso remove? Sim, remove. No entanto, ao invés de apenas remover text_reviews_count,
+# iremos gerar uma variável que é a proporção de resenhas por qtd de avaliações.
+
+livros_treino <- livros_treino %>% 
+  mutate(prop_text_reviews = text_reviews_count / ratings_count) %>% 
+  select(-text_reviews_count)
 
 livros_treino %>% 
   select(where(is.numeric),book_rating) %>% 
@@ -56,8 +61,8 @@ livros_treino %>%
 
 # As variáveis não se diferenciam quanto suas médias entre as classificações do livro
 
-grafico_bons_mes_ano <- livros_treino %>% 
-  mutate(book_rating = book_rating == "Bom") %>% 
+grafico_otimos_mes_ano <- livros_treino %>% 
+  mutate(book_rating = book_rating == "Ótimo") %>% 
   group_by(
     mes = month_publication,
     ano = year_publication
@@ -66,9 +71,9 @@ grafico_bons_mes_ano <- livros_treino %>%
   ggplot(aes(mes,ano, fill = book_rating)) + 
   geom_tile(alpha = .75) + 
   scale_fill_viridis_c(labels = scales::percent) + 
-  labs(fill = "% livros bons" , x="Mês", y="Ano",
-       title = "Composição dos livros avaliados como: BOM")+
-  theme(legend.position = "right");grafico_bons_mes_ano
+  labs(fill = "% livros ótimos" , x="Mês", y="Ano",
+       title = "Composição dos livros avaliados como: ÓTIMO")+
+  theme(legend.position = "right");grafico_otimos_mes_ano
   
 #grafico_regulares_mes_ano <- livros_treino %>% 
 #  mutate(book_rating = book_rating == "Regular") %>% 

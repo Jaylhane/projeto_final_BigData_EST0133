@@ -38,18 +38,18 @@ livros <- livros %>%
 
 rm(linhas_invalidas_de_language_code)
 
-autores <- livros %>% 
-  select(authors) %>% 
-  unique()
+# autores <- livros %>% 
+#  select(authors) %>% 
+#  unique()
 
-genero <- gender(autores$authors,
-                 countries = c("United States",
-                               "Canada",
-                               "United Kingdom")) %>% 
-  select(name, gender) %>% 
-  distinct()
+# genero <- gender(autores$authors,
+#                 countries = c("United States",
+#                               "Canada",
+#                               "United Kingdom")) %>% 
+#  select(name, gender) %>% 
+#  distinct()
 
-rm(autores,genero)
+#rm(autores,genero)
 # Não funcionou, pois há mais de 6k autores e ele só identificou 4,
 # dessa forma, iremos seguir coma análise sem a variável gênero. 
 
