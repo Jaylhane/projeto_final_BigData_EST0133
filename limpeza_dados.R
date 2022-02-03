@@ -4,9 +4,9 @@
 #####Bibliotecas#####
 
 library(tidyverse)
-library(gender)
-library(genderdata)
-check_genderdata_package()
+#library(gender)
+#library(genderdata)
+#check_genderdata_package()
 #install_genderdata_package()
 library(lubridate)
 
@@ -58,14 +58,37 @@ summary(as.factor(livros$publisher))
 # tem alguns nomes de editoras em chines, iremos evitar transformar esses dados em
 # fator para não prejudicar essa informação
 
+## Atualização quanto ao `publisher`, é melhor remover essa variável pois haverá
+## muitas categorias, exigindo muito processamento computacional na árvore de decisão
+
+#####Verificando a lingua#####
+
+livros %>% 
+  ggplot(aes(language_code))+
+  geom_bar()+
+  coord_flip()
+
+## Como há muito pouca variação linguistica comparado ao grupo inglês, 
+## dividiremos a categoria de `language_code` em duas: inglês e não inglês
+
+
 livros <- livros %>% 
   mutate(publication_date = mdy(publication_date),
          average_rating = as.double(average_rating),
          num_pages = as.integer(num_pages),
          book_age = year(today())-year(publication_date),
          month_publication = as.factor(month(publication_date)),
-         year_publication = as.factor(year(publication_date))) %>% 
-  select(-authors, -publication_date) %>% 
+         year_publication = as.factor(year(publication_date)),
+         language_code = factor(
+           ifelse(language_code %in% c("enm",
+                                       "eng",
+                                       "en-US",
+                                       "en-GB",
+                                       "en-CA"),
+                  "English","Other")
+           )
+         ) %>% 
+  select(-authors, -publication_date, -publisher) %>% 
   na.omit()
 
 summary(livros)
@@ -76,12 +99,21 @@ livros %>%
   ggplot(aes(x=average_rating, after_stat(scaled)))+
   geom_histogram(aes(y=..density..),
                  bins = 15)+
-  geom_density()
+  geom_density()+
+  geom_vline(xintercept = c(3.5,4), color = "green", lty=2)
 
 # e conferindo a quantidade de observações menores de 3 temos: 
 
 livros %>% 
-  filter(average_rating<3) %>% 
+  filter(average_rating<3.5) %>% 
+  count()
+
+summary(livros$average_rating)
+
+quantile(livros$average_rating,.67)
+
+livros %>% 
+  filter(average_rating>4) %>% 
   count()
 
 # dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] 
@@ -92,11 +124,15 @@ livros %>%
 livros <- livros %>% 
   mutate(
     book_rating =
-      case_when(average_rating<=3 ~ "Regular",
-                TRUE ~ "Bom")
+      case_when(average_rating<3.5 ~ "Ruim",
+                average_rating<=4 ~ "Bom",
+                TRUE ~ "Ótimo")
   ) %>% 
   select(-average_rating)
 
+livros %>% 
+  group_by(book_rating) %>% 
+  count()
 
 #####Salvando os dados atuais#####
 
