@@ -47,6 +47,11 @@ livros_treino <- livros_treino %>%
   mutate(prop_text_reviews = text_reviews_count / ratings_count) %>% 
   select(-text_reviews_count)
 
+cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
+    use = "complete", method = "spearman")
+
+# baixa correlação, não dando colinearidade
+
 livros_treino %>% 
   select(where(is.numeric),book_rating) %>% 
   pivot_longer(-book_rating) %>% 
@@ -115,6 +120,7 @@ livros_treino %>%
        title = "Quantidade de Publicações por Ano")+
   scale_fill_viridis_d()
   
+
 # a partir de 1986 há um crescimento exponencial de publições por ano nos dados, 
 # de forma que é compreensível que para os intervalos de anos de 1986 a 2008 
 # está bem mesclado a % de livros bons publicados
