@@ -1,0 +1,455 @@
+---
+title: "Análise de avaliações de livros usando a técnica XGBOOST"
+author: |
+  | Ana Luzielma Dias Campos
+  | Jaylhane Veloso Nunes
+  | Raianny da Silva Soares
+df_print: paged
+output:
+  html_document:
+    df_print: paged
+---
+
+
+# Introdução
+
+Quando se está procurando uma nova leitura, uma das coisas que pode ser observada é a avaliação do livro.De acordo com ela, pode-se ter uma ideia inicial se o livro é bom,se ele segue uma dinâmica que se está habituabo, já que muitas pessoas deram uma nota alta de avaliação.
+Pensando sobre isso, levantamos o questionamento: seria possível predizer se um livro é bom sem ter acesso a nota da avaliação? Dessa forma pensamos em realizar um modelo para classificar a avaliação de um livro.
+Para esta tarefa utilizaremos o seguinte conjunto de dados: Goodreads-books | Kaggle  e como inspiração para construção do modelo utilizaremos o seguinte guia: Tune xgboost models with early stopping to predict shelter animal status | Julia Silge
+
+Assim, uma das possibilidades que foram pensadas é fazer uma categorização das avaliações dos livros em “Ruim”, “Bom” e ''Ótimo”, considerando respectivamente os intervalos de nota de [0, 3.5), de [3.5, 4] e de (4, 5], e a partir daí predizer a avaliação dos livros utilizando o XGboost. O critério de intervalo para as categorias das notas foi definido subjetivamente ao acaso entre as participantes do grupo. 
+Além disso, como o objetivo é classificar os livros sem olhar as avaliações, as notas não farão parte do modelo, elas serão utilizadas apenas para criar as categorias e estamos supondo que de alguma forma as variáveis como número de páginas, idade do livro, editora, quantidade de notas de avaliações e quantidade de avaliações escritas estão relacionadas com a avaliação do livro.
+
+[ ACHO QUE ISSO NÃO É PARA ADICIONAR
+Ficamos curiosas com outros pontos que podemos incluir no modelo, tais como: será que o mês em que o livro foi lançado influencia? Ou o gênero do autor? 
+Dado que temos a variável com o nome dos autores, podemos predizer o gênero por meio de pacotes como Gender e genderdata. Um empecilho para usar esses pacotes é o fato de que alguns autores constam no conjunto de dados com nomes abreviados, por isso essa ideia ainda está em análise. ]
+
+
+# Análise exploratória
+
+## Limpeza dos dados
+
+```{r,, message=FALSE, warning=FALSE}
+#Pacotes necessários
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(vip)
+
+theme_set(theme_light())
+```
+
+```{r message=FALSE, warning=FALSE}
+#####Carregando os dados#####
+
+livros <- read.csv("./Conjunto de Dados/books.csv",
+                   encoding = "UTF-8",
+                   header = TRUE) %>% 
+  select(-bookID, 
+         -title, 
+         -isbn, 
+         -isbn13) %>% 
+  na.omit()
+
+
+```
+
+```{r message=FALSE, warning=FALSE}
+#####Tratando os dados#####
+
+summary(as.factor(livros$language_code))
+
+linhas_invalidas_de_language_code<- livros %>% 
+  filter(language_code=="9780674842113"|
+           language_code=="9780851742717"|
+           language_code=="9781563841552"|
+           language_code=="9781593600112"|
+           language_code=="")
+
+livros <- livros %>% 
+  filter(!(language_code%in%linhas_invalidas_de_language_code$language_code))
+
+rm(linhas_invalidas_de_language_code)
+
+
+summary(as.factor(livros$publisher))
+
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+       
+       
+#####Verificando a lingua#####
+
+livros %>% 
+  ggplot(aes(language_code))+
+  geom_bar()+
+  coord_flip()
+
+## Como há muito pouca variação linguistica comparado ao grupo inglês, 
+## dividiremos a categoria de `language_code` em duas: inglês e não inglês
+
+
+livros <- livros %>% 
+  mutate(publication_date = mdy(publication_date),
+         average_rating = as.double(average_rating),
+         num_pages = as.integer(num_pages),
+         book_age = year(today())-year(publication_date),
+         month_publication = as.factor(month(publication_date)),
+         year_publication = as.factor(year(publication_date)),
+         language_code = factor(
+           ifelse(language_code %in% c("enm",
+                                       "eng",
+                                       "en-US",
+                                       "en-GB",
+                                       "en-CA"),
+                  "English","Other")
+           )
+         ) %>% 
+  select(-authors, -publisher) %>% 
+  na.omit()
+
+summary(livros)
+
+
+```
+
+```{r message=FALSE, warning=FALSE}
+
+# 50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
+
+livros %>% 
+  ggplot(aes(x=average_rating, after_stat(scaled)))+
+  geom_histogram(aes(y=..density..),
+                 bins = 15)+
+  geom_density()+
+  geom_vline(xintercept = c(3.5,4), color = "green", lty=2)
+
+#e conferindo a quantidade de observações menores de 3 temos: 
+
+livros %>% 
+  filter(average_rating<3.5) %>% 
+  count()
+
+summary(livros$average_rating)
+
+quantile(livros$average_rating,.67)
+
+livros %>% 
+  filter(average_rating>4) %>% 
+  count()
+
+# dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] 
+# e bom no intervalo de (3,5], uma vez que pelo histograma é percebido ter poucas notas acima de 4 também. 
+
+# Dessa forma, nosso conjunto de dados final é composto por duas categorias: regular e bom. Aplicando no conjunto de dados:
+
+livros <- livros %>% 
+  mutate(
+    book_rating =
+      case_when(average_rating<3.5 ~ "Ruim",
+                average_rating<=4 ~ "Bom",
+                TRUE ~ "Ótimo")
+  ) %>% 
+  select(-average_rating)
+
+livros %>% 
+  group_by(book_rating) %>% 
+  count()
+
+#####Salvando os dados atuais#####
+
+write.csv(livros, 
+          "./Conjunto de Dados/books_t.csv",
+          fileEncoding = "UTF-8",
+          row.names = FALSE)   
+
+```
+
+
+
+## Tratamento dos dados
+
+
+
+```{r message=FALSE, warning=FALSE}
+#####Carregando os Dados#####
+
+livros <- read.csv("./Conjunto de Dados/books_t.csv",
+                   encoding = "UTF-8") %>% 
+  mutate_if(is.character,factor) %>%
+  mutate(month_publication=factor(month_publication),
+         year_publication=factor(year_publication),
+         book_rating=factor(book_rating,
+                            levels = c("Ótimo","Bom","Ruim")))
+```
+
+```{r message=FALSE, warning=FALSE}
+#####Separando em Treino e Teste#####
+
+set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
+
+livros_split <- initial_split(livros, prop = .75, strata = book_rating)
+
+livros_treino <- training(livros_split)
+
+livros_teste <- testing(livros_split)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+#####Verificando a correlação das variáveis quantitativas#####
+
+library(GGally)
+
+livros_treino %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
+
+hist(livros_treino$text_reviews_count)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+
+```
+
+```{r message=FALSE, warning=FALSE}
+livros_treino <- livros_treino %>% 
+  mutate(prop_text_reviews = text_reviews_count / ratings_count) %>% 
+  select(-text_reviews_count)
+
+cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
+    use = "complete", method = "spearman")
+```
+
+
+```{r message=FALSE, warning=FALSE}
+livros_treino %>% 
+  select(where(is.numeric),book_rating) %>% 
+  pivot_longer(-book_rating) %>% 
+  ggplot(.,aes(fill = book_rating)) +
+  geom_boxplot(aes(y=value)) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x="",
+       y="Valor",
+       fill = "Classificação\ndo Livro",
+       title = "Boxplot das variáveis por classificação do livro")+
+  scale_fill_viridis_d()
+
+```
+
+```{r message=FALSE, warning=FALSE}
+grafico_otimos_mes_ano <- livros_treino %>% 
+  mutate(book_rating = book_rating == "Ótimo") %>% 
+  group_by(
+    mes = month_publication,
+    ano = year_publication
+  ) %>% 
+  summarise(book_rating = mean(book_rating)) %>% 
+  ggplot(aes(mes,ano, fill = book_rating)) + 
+  geom_tile(alpha = .75) + 
+  scale_fill_viridis_c(labels = scales::percent) + 
+  labs(fill = "% livros ótimos" , x="Mês", y="Ano",
+       title = "Composição dos livros avaliados como: ÓTIMO")+
+  theme(legend.position = "right");grafico_otimos_mes_ano
+
+```
+
+```{r message=FALSE, warning=FALSE}
+# Verificando a distribuição de livros publicados ao longo dos anos temos:
+
+livros_treino %>%  
+  group_by(
+    mes = month_publication,
+    ano = year_publication
+  ) %>% 
+  count() %>% 
+  ggplot(aes(n,ano, fill=mes))+
+  geom_col()+
+  geom_hline(yintercept = "1986", color = "blue", lty=2)+
+  geom_hline(yintercept = "2008", color = "blue", lty=2)+
+  theme(panel.border = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank())+
+  labs(x = "Quantidade Publicações",
+       y = "Ano",
+       fill = "Mês",
+       title = "Quantidade de Publicações por Ano")+
+  scale_fill_viridis_d()
+
+```
+
+```{r message=FALSE, warning=FALSE}
+
+```
+
+
+# Modelagem
+
+
+```{r,, message=FALSE, warning=FALSE}
+theme_set(theme_light(base_family = "IBMPlexSans"))
+
+livros <- read.csv("./Conjunto de Dados/books_t.csv",
+                   encoding = "UTF-8") %>% 
+  mutate(publication_date=as.Date(publication_date),  
+         prop_text_reviews = text_reviews_count / ratings_count,
+         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf), 0, prop_text_reviews),
+         book_rating=factor(book_rating,
+                            levels = c("Ótimo","Bom","Ruim"))) %>% 
+  select(-month_publication, -year_publication, -text_reviews_count) %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>% 
+  filter(ratings_count<1000)
+
+
+```
+
+
+```{r,, message=FALSE, warning=FALSE}
+theme_set(theme_light(base_family = "IBMPlexSans"))
+
+livros <- read.csv("./Conjunto de Dados/books_t.csv",
+                   encoding = "UTF-8") %>% 
+  mutate(publication_date=as.Date(publication_date),  
+         prop_text_reviews = text_reviews_count / ratings_count,
+         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf), 0, prop_text_reviews),
+         book_rating=factor(book_rating,
+                            levels = c("Ótimo","Bom","Ruim"))) %>% 
+  select(-month_publication, -year_publication, -text_reviews_count) %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>% 
+  filter(ratings_count<1000)
+
+```
+
+```{r,, message=FALSE, warning=FALSE}
+#####Criando Métricas#####
+
+livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss)
+
+#####Criando Folds#####
+
+set.seed(1989)
+livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10)
+livros_folds
+
+```
+
+```{r,, message=FALSE, warning=FALSE}
+#####Criando a receita - Pre-processamento de Dados#####
+
+livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
+  themis::step_downsample(book_rating) %>% 
+  step_date(publication_date, features = c("month"), 
+            keep_original_cols = FALSE) %>%
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+  step_zv(all_numeric_predictors()) %>% 
+  #step_pca(all_predictors(),threshold = .80) %>% 
+  prep()
+
+prep(livros_rec) %>% 
+  bake(new_data =NULL)
+# 19 colunas
+# 2 colunas com PCA
+
+
+### TREINO E TESTE?
+
+```
+
+
+```{r,, message=FALSE, warning=FALSE}
+ #####Grid de Procura e Parada antecipada#####
+
+stopping_spec <-
+  boost_tree(
+    trees = 500,
+    mtry = tune(),
+    learn_rate = tune(),
+    stop_iter = tune()
+  ) %>%
+  set_engine("xgboost", validation = 0.2) %>%
+  set_mode("classification")
+
+stopping_grid <-
+  grid_latin_hypercube(
+    mtry(range = c(5L, 18L)),
+    learn_rate(range = c(-5, -1)), 
+    stop_iter(range = c(10L, 50L)), 
+    size = 10
+  )
+
+early_stop_wf <- workflow(livros_rec, stopping_spec)
+
+
+```
+
+```{r,, message=FALSE, warning=FALSE}
+#####Avaliação do Modelo#####
+
+autoplot(stopping_rs)
+
+show_best(stopping_rs, metric = "mn_log_loss")
+
+stopping_fit <- early_stop_wf %>%
+  finalize_workflow(select_best(stopping_rs, "mn_log_loss")) %>%
+  last_fit(livros_split)
+
+stopping_fit
+
+collect_metrics(stopping_fit)
+
+
+```
+
+```{r,, message=FALSE, warning=FALSE}
+extract_workflow(stopping_fit) %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 15, geom = "point")+
+  ggtitle("Variáveis mais importantes no modelo")
+
+collect_predictions(stopping_fit) %>%
+  conf_mat(book_rating, .pred_class) %>%
+  autoplot(type = "heatmap")+
+  ggtitle("Mapa de Calor das Predições")
+
+```
+
+```{r,, message=FALSE, warning=FALSE}
+collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = .level)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(alpha = 0.8, size = 1) +
+  coord_equal() +
+  labs(color = NULL,
+       title =  "Curva ROC Modelo Final")
+
+```
+
+
+```{r,, message=FALSE, warning=FALSE}
+## Verdadeiro positivo
+collect_predictions(stopping_fit) %>% 
+  sens(book_rating, .pred_class)
+
+## Verdadeiro negativo
+collect_predictions(stopping_fit) %>% 
+  spec(book_rating, .pred_class)
+
+```
+
+
+# Conclusão
+
+
+
+
+
+
+
+
