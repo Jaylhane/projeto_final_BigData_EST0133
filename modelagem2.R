@@ -6,7 +6,6 @@ library(tidymodels)
 
 theme_set(theme_light(base_family = "IBMPlexSans"))
 
-
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
   mutate(publication_date=as.Date(publication_date),  
@@ -14,7 +13,10 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
          prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf), 0, prop_text_reviews),
          book_rating=factor(book_rating,
                             levels = c("Ótimo","Bom","Ruim"))) %>% 
-  select(-month_publication, -year_publication, -text_reviews_count)
+  select(-month_publication, -year_publication, -text_reviews_count) %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>% 
+  filter(ratings_count<1000)
 
 #####Separando Treino e Teste#####
 
@@ -40,15 +42,17 @@ livros_folds
 
 livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   themis::step_downsample(book_rating) %>% 
-  step_date(publication_date, features = c("year", "month"), 
+  step_date(publication_date, features = c("month"), 
             keep_original_cols = FALSE) %>%
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
   step_zv(all_numeric_predictors()) %>% 
+  #step_pca(all_predictors(),threshold = .80) %>% 
   prep()
 
 prep(livros_rec) %>% 
   bake(new_data =NULL)
-#20 colunas
+# 19 colunas
+# 2 colunas com PCA
 
 #####Aplicando a receita nos conj de treino e teste#####
 
@@ -71,9 +75,9 @@ stopping_spec <-
 
 stopping_grid <-
   grid_latin_hypercube(
-    mtry(range = c(5L, 19L)), ## depends on number of columns in data
-    learn_rate(range = c(-5, -1)), ## keep pretty big
-    stop_iter(range = c(10L, 50L)), ## bigger than default
+    mtry(range = c(5L, 18L)),
+    learn_rate(range = c(-5, -1)), 
+    stop_iter(range = c(10L, 50L)), 
     size = 10
   )
 

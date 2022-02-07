@@ -1,0 +1,194 @@
+---
+title: "Untitled"
+author: 
+- Ana Luzielma \newline
+- Jaylhane Nunes \newline
+- Raianny Soares
+date: "07/02/2022"
+
+header-includes:
+  - \usepackage[brazilian]{babel}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+  - \usepackage[utf8]{inputenc} 
+  - \usepackage{pagecolor}
+  - \usepackage{xcolor}
+  - \usepackage{indentfirst}
+  - \setlength\parindent{22pt}
+  - \usepackage{longtable,booktabs}
+  #- \usepackage[orientation=landscape,size=custom,width=16,height=9.75,scale=0.5, debug]{beamerposter} 
+
+output: 
+  beamer_presentation:
+    #toc: TRUE
+    theme: "Dresden"
+    colortheme: "seagull"
+    fonttheme: "structuresmallcapsserif"
+    slide_level: 4
+    keep_tex: TRUE
+    
+fontsize: 9 pt
+  
+---
+
+```{r setup, include=FALSE}
+# preparacao do documento
+
+library(knitr)
+opts_chunk$set(echo = TRUE, 
+               eval = TRUE, 
+               # quando cache = TRUE, o R soh irah rodar o chunk
+               # se houver alguma alteração entre duas compilacoes
+               # consecutivas. portanto, se o seu trabalho estiver
+               # levando muito tempo para finalizar, altere a configuracao
+               # abaixo. apague manualmente as pastas do cache antes de
+               # compilar o arquivo pela ultima vez
+               cache = TRUE, 
+               dev = "png",
+               dpi = 500
+               )
+
+# paralelizacao - este código fará com que seu computador
+# rode trechos do código em paralelo, de modo a reduzir
+# o tempo de processamento necessario
+
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(kableExtra)
+
+theme_set(theme_light(base_family = "IBMPlexSans"))
+```
+
+# Introdução
+
+### Contextualização
+
+Motivadas pelo interesse comum em leitura optamos por realizar a análise de um conjuntos de dados envolvendo livros. 
+
+O conjunto de dados selecionado possui **11.131 observações**, foi originalmente obtido por meio de **raspagem** de dados na **API** da plataforma **GoodReads** e se encontra disponível no site **Kagle**. 
+
+Nele é possível encontras as seguintes colunas:
+```{r, echo=FALSE}
+nomes_df_livros <- names(read.csv("./Conjunto de Dados/books.csv",
+                                  encoding = "UTF-8",
+                                  header = TRUE))
+#descricao <- c("Identificação",
+#               "Título",
+#               "Autores",
+#               "Média de Avaliação",
+#               "Código ISBN",
+#               "Código ISBN13",
+#               "Língua original de publicação",
+#               "Número de páginas",
+#               "Quantidade de Avaliações",
+#               "Quantidade de Avaliações Escritas",
+#               "Data de publicação",
+#               "Editora")
+
+nomes_df_livros <- matrix(nomes_df_livros,ncol = 4)
+
+kable(nomes_df_livros,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+```
+
+Chegamos em um consenso que geralmente há fatores influenciando na satisfação com a leitura e quisemos investigar se, com os dados disponíveis, seria possível obter um modelo que conseguisse predizer se o livro foi considerado: _ruim_, _bom_ ou _ótimo_ . 
+
+### Uma Ideia Inicial
+
+![](./Imagens/desempenho_xgboost_comparacao.png){width=75%}
+
+Dentre as leituras realizadas sobre as possibilidades de modelos e métodos, percebemos que o XGboost tinha um ótimo desempenho comparado a outros modelos, e que, apesar da variável `average_rating` ser uma variável contínua um método de classificação poderia ser adequado para os nossos objetivos, desde que gerassemos categorias e encaixassemos os intervalos. 
+
+### A Inspiração Final
+
+![](./Imagens/xgboost_juliasilge.png){width=85%, height=90%}
+
+### Indicamos
+
+![](./Imagens/juliasilge_mini.png)
+juliasilge.com
+
+- _Agora, ao nosso modelo!_
+
+# Desenvolvimento
+
+### Engenharia de Dados
+
+A análise exploratória consistiu em:
+
+- Limpeza dos Dados
+- Análise Descritiva
+
+Dado os nossos objetivos, percebemos que algumas colunas eram dispensáveis e outras poderiam ser transformadas, de forma que:  
+
+```{r cars, echo=FALSE}
+excluidas <- c(nomes_df_livros[1,c(1)],
+               nomes_df_livros[2,c(1,2)],
+               nomes_df_livros[3,c(1,2,4)])
+
+Transfomadas <- c(nomes_df_livros[1,c(2,3,4)],
+                  nomes_df_livros[2,c(4)],
+                  "",
+                  "")
+
+Geradas <- c("book_rating¹",
+             "",
+             "prop_text_reviews²",
+             "",
+             "",
+             "")
+
+final <- data.frame(excluidas,Transfomadas,Geradas) %>% 
+  rename("Excluídas" = excluidas)
+
+kable(final,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+
+```
+
+##### _Nosso **MAIOR** desafio durante a análise e a modelagem esteve relacionado a essa fase de engenharia de dados_
+
+### Análise Exploratória
+
+- Para iniciar separamos o conjunto em **treino** e **teste** baseando-nos em 75% das observações e balanceando-os com nossa variável resposta `book_rating`. 
+
+```{r, echo=FALSE}
+livros <- read.csv("./Conjunto de Dados/books_t.csv",
+                   encoding = "UTF-8") %>% 
+  mutate_if(is.character,factor) %>%
+  mutate(month_publication=factor(month_publication),
+         year_publication=factor(year_publication),
+         book_rating=factor(book_rating,
+                            levels = c("Ótimo","Bom","Ruim")))
+```
+
+```{r}
+set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
+livros_split <- initial_split(livros, prop = .75, strata = book_rating)
+livros_treino <- training(livros_split)
+livros_teste <- testing(livros_split)
+```
+
+- Em seguida verificamos a dispersão e correlação entre as variáveis numéricas:
+
+```{r}
+library(GGally)
+livros_treino %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
+```
+
+- Correlação forte entre `text_reviews_count` e `ratings_count`. 
+- Pensamos em gerar uma variável que considerasse a quantidade de `text_reviews_count` pois consideramos que isso seria um indicativo importante para nossa resposta e chegamos a uma variável que correspondesse a proporção entre `text_reviews_count`/`ratings_count`
+
+```{r}
+livros_treino <- livros_treino %>% 
+  mutate(prop_text_reviews = text_reviews_count / ratings_count) %>% 
+  select(-text_reviews_count)
+
+cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
+    use = "complete", method = "spearman")
+```
+
+- A correlação entre `prop_text_reviews`e `ratings_count` não indicou multirolinearidade, então prosseguimos com essa variável.

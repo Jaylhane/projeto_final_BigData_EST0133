@@ -127,3 +127,50 @@ livros_treino %>%
 # de forma que é compreensível que para os intervalos de anos de 1986 a 2008 
 # está bem mesclado a % de livros bons publicados
 
+livros_treino %>% 
+  ggplot(aes(x=book_age)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$book_age),
+             color="green", lty=2)
+# filtrar livros menores de 40 anos
+
+livros_treino %>% 
+  ggplot(aes(x=num_pages)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$num_pages),
+             color="green", lty=2)
+# filtrar livros com menos de 1000 páginas
+
+livros_treino %>% 
+  ggplot(aes(x=ratings_count)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$ratings_count),
+             color="green", lty=2)
+
+summary(livros_treino$ratings_count)
+
+# filtrar livros com menos de 1000 avaliações
+
+livros_treino %>% 
+  ggplot(aes(x=prop_text_reviews)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$prop_text_reviews, na.rm = TRUE),
+             color="green", lty=2)
+
+# não filtrar pela proporção, pois essa é uma resposta importante
+
+
+livros_treino %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>%
+  filter(ratings_count<1000) %>% 
+  select(where(is.numeric),book_rating) %>% 
+  pivot_longer(-book_rating) %>% 
+  ggplot(.,aes(fill = book_rating)) +
+  geom_boxplot(aes(y=value)) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x="",
+       y="Valor",
+       fill = "Classificação\ndo Livro",
+       title = "Boxplot das variáveis por classificação do livro")+
+  scale_fill_viridis_d()
