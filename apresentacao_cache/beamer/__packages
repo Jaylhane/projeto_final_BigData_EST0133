@@ -1,6 +1,5 @@
 base
 knitr
-kableExtra
 tidyverse
 ggplot2
 tibble
@@ -24,4 +23,5 @@ workflows
 workflowsets
 yardstick
 lubridate
+kableExtra
 GGally

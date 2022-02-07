@@ -35,7 +35,9 @@ fontsize: 9 pt
 # preparacao do documento
 
 library(knitr)
-opts_chunk$set(echo = TRUE, 
+opts_chunk$set(message=FALSE, 
+               warning=FALSE,
+               echo = TRUE, 
                eval = TRUE, 
                # quando cache = TRUE, o R soh irah rodar o chunk
                # se houver alguma alteração entre duas compilacoes
@@ -43,6 +45,7 @@ opts_chunk$set(echo = TRUE,
                # levando muito tempo para finalizar, altere a configuracao
                # abaixo. apague manualmente as pastas do cache antes de
                # compilar o arquivo pela ultima vez
+               results="asis",
                cache = TRUE, 
                dev = "png",
                dpi = 500
@@ -56,6 +59,7 @@ library(tidyverse)
 library(tidymodels)
 library(lubridate)
 library(kableExtra)
+library(GGally)
 
 theme_set(theme_light(base_family = "IBMPlexSans"))
 ```
@@ -66,7 +70,7 @@ theme_set(theme_light(base_family = "IBMPlexSans"))
 
 Motivadas pelo interesse comum em leitura optamos por realizar a análise de um conjuntos de dados envolvendo livros. 
 
-O conjunto de dados selecionado possui **11.131 observações**, foi originalmente obtido por meio de **raspagem** de dados na **API** da plataforma **GoodReads** e se encontra disponível no site **Kagle**. 
+O conjunto de dados selecionado possui **11.131 observações**, foi gerado por meio de **raspagem** de dados na **API** da plataforma **GoodReads** e disponibilizado por **_Soumik_** no site **Kagle**. 
 
 Nele é possível encontras as seguintes colunas:
 ```{r, echo=FALSE}
@@ -92,7 +96,7 @@ kable(nomes_df_livros,booktabs= TRUE) %>%
   kable_styling(latex_options = "HOLD_position", position = "center")
 ```
 
-Chegamos em um consenso que geralmente há fatores influenciando na satisfação com a leitura e quisemos investigar se, com os dados disponíveis, seria possível obter um modelo que conseguisse predizer se o livro foi considerado: _ruim_, _bom_ ou _ótimo_ . 
+Chegamos a um consenso que diversos fatores influenciam na satisfação com a leitura e quisemos investigar se, com os dados disponíveis, seria possível obter um modelo que conseguisse predizer se o livro foi considerado: _ruim_, _bom_ ou _ótimo_ . 
 
 ### Uma Ideia Inicial
 
@@ -102,7 +106,7 @@ Dentre as leituras realizadas sobre as possibilidades de modelos e métodos, per
 
 ### A Inspiração Final
 
-![](./Imagens/xgboost_juliasilge.png){width=85%, height=90%}
+![](./Imagens/xgboost_juliasilge.png){width=95%, height=90%}
 
 ### Indicamos
 
@@ -151,7 +155,7 @@ kable(final,booktabs= TRUE) %>%
 
 ### Análise Exploratória
 
-- Para iniciar separamos o conjunto em **treino** e **teste** baseando-nos em 75% das observações e balanceando-os com nossa variável resposta `book_rating`. 
+- Para iniciar separamos o conjunto em **treino** e **teste** baseando-nos em 75% das observações e balanceando-as com nossa variável resposta:  `book_rating`. 
 
 ```{r, echo=FALSE}
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
@@ -172,15 +176,26 @@ livros_teste <- testing(livros_split)
 
 - Em seguida verificamos a dispersão e correlação entre as variáveis numéricas:
 
-```{r}
-library(GGally)
+```{r, results="hide", eval=FALSE}
 livros_treino %>% 
   select(where(is.numeric)) %>% 
   ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
 ```
 
+### Análise Exploratória
+
+```{r, echo=FALSE}
+livros_treino %>% 
+  select(where(is.numeric)) %>% 
+  ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
+```
+
+### Análise Exploratória
+
+Com o resultado anterior percebemos que: 
+
 - Correlação forte entre `text_reviews_count` e `ratings_count`. 
-- Pensamos em gerar uma variável que considerasse a quantidade de `text_reviews_count` pois consideramos que isso seria um indicativo importante para nossa resposta e chegamos a uma variável que correspondesse a proporção entre `text_reviews_count`/`ratings_count`
+- Pensamos em gerar uma variável que considerasse a quantidade de `text_reviews_count`,pois consideramos que isso seria um indicativo importante para nossa resposta e chegamos a uma variável que correspondesse a proporção entre `text_reviews_count`/`ratings_count`
 
 ```{r}
 livros_treino <- livros_treino %>% 
@@ -191,4 +206,125 @@ cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
     use = "complete", method = "spearman")
 ```
 
-- A correlação entre `prop_text_reviews`e `ratings_count` não indicou multirolinearidade, então prosseguimos com essa variável.
+- A correlação entre `prop_text_reviews`e `ratings_count` não indicou multicolinearidade, então prosseguimos com essa variável como preditora.
+
+### Continuando a Análise Exploratória e Descritiva
+
+```{r, echo=FALSE}
+livros_treino %>% 
+  select(where(is.numeric),book_rating) %>% 
+  pivot_longer(-book_rating) %>% 
+  ggplot(.,aes(fill = book_rating)) +
+  geom_boxplot(aes(y=value)) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x="",
+       y="Valor",
+       fill = "Classificação\ndo Livro",
+       title = "Boxplot das variáveis por classificação do livro")+
+  scale_fill_viridis_d()
+```
+
+### Continuando a Análise Exploratória e Descritiva
+
+```{r, echo=FALSE}
+livros_treino %>% 
+  mutate(book_rating = book_rating == "Ótimo") %>% 
+  group_by(
+    mes = month_publication,
+    ano = year_publication
+  ) %>% 
+  summarise(book_rating = mean(book_rating)) %>% 
+  ggplot(aes(mes,ano, fill = book_rating)) + 
+  geom_tile(alpha = .75) + 
+  scale_fill_viridis_c(labels = scales::percent) + 
+  labs(fill = "% livros ótimos" , x="Mês", y="Ano",
+       title = "Escala dos livros avaliados como: ÓTIMO")+
+  theme(legend.position = "right")
+```
+
+### Mais gráficos =)
+
+```{r, echo=FALSE}
+livros_treino %>%  
+  group_by(
+    mes = month_publication,
+    ano = year_publication
+  ) %>% 
+  count() %>% 
+  ggplot(aes(n,ano, fill=mes))+
+  geom_col()+
+  geom_hline(yintercept = "1986", color = "blue", lty=2)+
+  geom_hline(yintercept = "2008", color = "blue", lty=2)+
+  theme(panel.border = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank())+
+  labs(x = "Quantidade Publicações",
+       y = "Ano",
+       fill = "Mês",
+       title = "Quantidade de Publicações por Ano")+
+  scale_fill_viridis_d()
+```
+
+### Definindo Filtros
+
+```{r, echo=FALSE}
+gridExtra::grid.arrange(ncol=2,
+                        livros_treino %>% 
+  ggplot(aes(x=book_age)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$book_age),
+             color="green", lty=2)+
+  labs(title = "Histograma book_age",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=num_pages)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$num_pages),
+             color="green", lty=2)+
+  labs(title = "Histograma num_pages",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=ratings_count)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$ratings_count),
+             color="green", lty=2)+
+  labs(title = "Histograma ratings_count",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=prop_text_reviews)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$prop_text_reviews, na.rm = TRUE),
+             color="green", lty=2)+
+  labs(title = "Histograma prop_text_reviews",
+       x="",
+       y="")
+)
+```
+
+### Novo boxplot com filtros aplicados
+
+```{r, echo=FALSE}
+livros_treino %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>%
+  filter(ratings_count<1000) %>% 
+  select(where(is.numeric),book_rating) %>% 
+  pivot_longer(-book_rating) %>% 
+  ggplot(.,aes(fill = book_rating)) +
+  geom_boxplot(aes(y=value)) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x="",
+       y="Valor",
+       fill = "Classificação\ndo Livro",
+       title = "Boxplot das variáveis por classificação do livro")+
+  scale_fill_viridis_d()
+```
+
+## A modelagem
+

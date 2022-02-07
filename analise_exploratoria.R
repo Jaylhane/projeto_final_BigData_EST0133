@@ -131,21 +131,30 @@ livros_treino %>%
   ggplot(aes(x=book_age)) +
   geom_histogram(bins=30)+
   geom_vline(xintercept = quantile(livros_treino$book_age),
-             color="green", lty=2)
+             color="green", lty=2)+
+  labs(title = "Histograma book_age",
+       x="",
+       y="")
 # filtrar livros menores de 40 anos
 
 livros_treino %>% 
   ggplot(aes(x=num_pages)) +
   geom_histogram(bins=30)+
   geom_vline(xintercept = quantile(livros_treino$num_pages),
-             color="green", lty=2)
+             color="green", lty=2)+
+  labs(title = "Histograma num_pages",
+       x="",
+       y="")
 # filtrar livros com menos de 1000 páginas
 
 livros_treino %>% 
   ggplot(aes(x=ratings_count)) +
   geom_histogram(bins=30)+
   geom_vline(xintercept = quantile(livros_treino$ratings_count),
-             color="green", lty=2)
+             color="green", lty=2)+
+  labs(title = "Histograma ratings_count",
+       x="",
+       y="")
 
 summary(livros_treino$ratings_count)
 
@@ -155,7 +164,10 @@ livros_treino %>%
   ggplot(aes(x=prop_text_reviews)) +
   geom_histogram(bins=30)+
   geom_vline(xintercept = quantile(livros_treino$prop_text_reviews, na.rm = TRUE),
-             color="green", lty=2)
+             color="green", lty=2)+
+  labs(title = "Histograma prop_text_reviews",
+       x="",
+       y="")
 
 # não filtrar pela proporção, pois essa é uma resposta importante
 

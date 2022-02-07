@@ -174,9 +174,9 @@ Motivadas pelo interesse comum em leitura optamos por realizar a análise
 de um conjuntos de dados envolvendo livros.
 
 O conjunto de dados selecionado possui \textbf{11.131 observações}, foi
-originalmente obtido por meio de \textbf{raspagem} de dados na
-\textbf{API} da plataforma \textbf{GoodReads} e se encontra disponível
-no site \textbf{Kagle}.
+gerado por meio de \textbf{raspagem} de dados na \textbf{API} da
+plataforma \textbf{GoodReads} e disponibilizado por
+\textbf{\emph{Soumik}} no site \textbf{Kagle}.
 
 Nele é possível encontras as seguintes colunas:
 
@@ -191,10 +191,10 @@ authors & isbn13 & ratings\_count & publisher\\
 \end{tabular}
 \end{table}
 
-Chegamos em um consenso que geralmente há fatores influenciando na
-satisfação com a leitura e quisemos investigar se, com os dados
-disponíveis, seria possível obter um modelo que conseguisse predizer se
-o livro foi considerado: \emph{ruim}, \emph{bom} ou \emph{ótimo} .
+Chegamos a um consenso que diversos fatores influenciam na satisfação
+com a leitura e quisemos investigar se, com os dados disponíveis, seria
+possível obter um modelo que conseguisse predizer se o livro foi
+considerado: \emph{ruim}, \emph{bom} ou \emph{ótimo} .
 \end{frame}
 
 \hypertarget{uma-ideia-inicial}{%
@@ -282,8 +282,8 @@ modelagem esteve relacionado a essa fase de engenharia de dados}}
 \tightlist
 \item
   Para iniciar separamos o conjunto em \textbf{treino} e \textbf{teste}
-  baseando-nos em 75\% das observações e balanceando-os com nossa
-  variável resposta \texttt{book\_rating}.
+  baseando-nos em 75\% das observações e balanceando-as com nossa
+  variável resposta: \texttt{book\_rating}.
 \end{itemize}
 
 \begin{Shaded}
@@ -304,95 +304,27 @@ modelagem esteve relacionado a essa fase de engenharia de dados}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(GGally)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## Warning: package 'GGally' was built under R version 4.0.5
-\end{verbatim}
-
-\begin{verbatim}
-## Registered S3 method overwritten by 'GGally':
-##   method from   
-##   +.gg   ggplot2
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
 \NormalTok{livros\_treino }\SpecialCharTok{\%\textgreater{}\%} 
   \FunctionTok{select}\NormalTok{(}\FunctionTok{where}\NormalTok{(is.numeric)) }\SpecialCharTok{\%\textgreater{}\%} 
   \FunctionTok{ggpairs}\NormalTok{(}\AttributeTok{upper =} \FunctionTok{list}\NormalTok{(}\AttributeTok{continuous =} \FunctionTok{wrap}\NormalTok{(}\StringTok{"cor"}\NormalTok{, }\AttributeTok{method =} \StringTok{"spearman"}\NormalTok{)))}
 \end{Highlighting}
 \end{Shaded}
+\end{frame}
 
-\begin{verbatim}
-## Warning in grid.Call(C_stringMetric, as.graphicsAnnot(x$label)): font family not
-## found in Windows font database
-\end{verbatim}
+\hypertarget{anuxe1lise-exploratuxf3ria-1}{%
+\subsubsection{Análise
+Exploratória}\label{anuxe1lise-exploratuxf3ria-1}}
 
-\begin{verbatim}
-## Warning in grid.Call(C_stringMetric, as.graphicsAnnot(x$label)): font family not
-## found in Windows font database
-\end{verbatim}
+\begin{frame}{Análise Exploratória}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-5-1.png}
+\end{frame}
 
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, : font
-## family not found in Windows font database
-\end{verbatim}
+\hypertarget{anuxe1lise-exploratuxf3ria-2}{%
+\subsubsection{Análise
+Exploratória}\label{anuxe1lise-exploratuxf3ria-2}}
 
-\begin{verbatim}
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-
-## Warning in cor.test.default(x, y, method = method, use = use): Cannot compute
-## exact p-value with ties
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-
-## Warning in grid.Call.graphics(C_text, as.graphicsAnnot(x$label), x$x, x$y, :
-## font family not found in Windows font database
-\end{verbatim}
-
-\begin{verbatim}
-## Warning in grid.Call(C_textBounds, as.graphicsAnnot(x$label), x$x, x$y, : font
-## family not found in Windows font database
-\end{verbatim}
-
-\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-4-1.png}
+\begin{frame}[fragile]{Análise Exploratória}
+Com o resultado anterior percebemos que:
 
 \begin{itemize}
 \tightlist
@@ -401,7 +333,7 @@ modelagem esteve relacionado a essa fase de engenharia de dados}}
   \texttt{ratings\_count}.
 \item
   Pensamos em gerar uma variável que considerasse a quantidade de
-  \texttt{text\_reviews\_count} pois consideramos que isso seria um
+  \texttt{text\_reviews\_count},pois consideramos que isso seria um
   indicativo importante para nossa resposta e chegamos a uma variável
   que correspondesse a proporção entre
   \texttt{text\_reviews\_count}/\texttt{ratings\_count}
@@ -418,17 +350,56 @@ modelagem esteve relacionado a essa fase de engenharia de dados}}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-## [1] -0.3605444
-\end{verbatim}
+{[}1{]} -0.3605444
 
 \begin{itemize}
 \tightlist
 \item
   A correlação entre \texttt{prop\_text\_reviews}e
-  \texttt{ratings\_count} não indicou multirolinearidade, então
-  prosseguimos com essa variável.
+  \texttt{ratings\_count} não indicou multicolinearidade, então
+  prosseguimos com essa variável como preditora.
 \end{itemize}
 \end{frame}
+
+\hypertarget{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva}{%
+\subsubsection{Continuando a Análise Exploratória e
+Descritiva}\label{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva}}
+
+\begin{frame}{Continuando a Análise Exploratória e Descritiva}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-7-1.png}
+\end{frame}
+
+\hypertarget{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva-1}{%
+\subsubsection{Continuando a Análise Exploratória e
+Descritiva}\label{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva-1}}
+
+\begin{frame}{Continuando a Análise Exploratória e Descritiva}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-8-1.png}
+\end{frame}
+
+\hypertarget{mais-gruxe1ficos}{%
+\subsubsection{Mais gráficos =)}\label{mais-gruxe1ficos}}
+
+\begin{frame}{Mais gráficos =)}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-9-1.png}
+\end{frame}
+
+\hypertarget{definindo-filtros}{%
+\subsubsection{Definindo Filtros}\label{definindo-filtros}}
+
+\begin{frame}{Definindo Filtros}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-10-1.png}
+\end{frame}
+
+\hypertarget{novo-boxplot-com-filtros-aplicados}{%
+\subsubsection{Novo boxplot com filtros
+aplicados}\label{novo-boxplot-com-filtros-aplicados}}
+
+\begin{frame}{Novo boxplot com filtros aplicados}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-11-1.png}
+\end{frame}
+
+\hypertarget{a-modelagem}{%
+\subsection{A modelagem}\label{a-modelagem}}
 
 \end{document}
