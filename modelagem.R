@@ -1,7 +1,5 @@
 # Modelagem
 
-
-
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
   mutate(publication_date=as.Date(publication_date),  
@@ -9,7 +7,6 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
          book_rating=factor(book_rating,
                             levels = c("Ótimo","Bom","Ruim"))) %>% 
   select(-month_publication, -year_publication, -text_reviews_count)
-
 
 #####Separando em Treino e Teste#####
 
@@ -34,7 +31,6 @@ livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
   step_zv(all_predictors()) %>% 
   prep()
-
 
 livros_treino_t <- juice(livros_rec)
 # preparar o conjunto de teste

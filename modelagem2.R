@@ -57,7 +57,7 @@ prep(livros_rec) %>%
 # livros_teste_t <- bake(livros_rec,
 #                        new_data = livros_teste)
 
-#####Grid de Procura e Parada antecipada#####
+ #####Grid de Procura e Parada antecipada#####
 
 stopping_spec <-
   boost_tree(
@@ -106,17 +106,27 @@ library(vip)
 
 extract_workflow(stopping_fit) %>%
   extract_fit_parsnip() %>%
-  vip(num_features = 15, geom = "point")
+  vip(num_features = 15, geom = "point")+
+  ggtitle("Variáveis mais importantes no modelo")
 
 collect_predictions(stopping_fit) %>%
-  roc_curve(book_rating, .pred_class:.pred_Bom) %>%
+  conf_mat(book_rating, .pred_class) %>%
+  autoplot(type = "heatmap")+
+  ggtitle("Mapa de Calor das Predições")
+
+collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>%
   ggplot(aes(1 - specificity, sensitivity, color = .level)) +
   geom_abline(lty = 2, color = "gray80", size = 1.5) +
   geom_path(alpha = 0.8, size = 1) +
   coord_equal() +
-  labs(color = NULL)
+  labs(color = NULL,
+       title =  "Curva ROC Modelo Final")
 
+## Verdadeiro positivo
+collect_predictions(stopping_fit) %>% 
+  sens(book_rating, .pred_class)
 
-#####Resultado no Conjunto de Teste#####
-
-
+## Verdadeiro negativo
+collect_predictions(stopping_fit) %>% 
+  spec(book_rating, .pred_class)
