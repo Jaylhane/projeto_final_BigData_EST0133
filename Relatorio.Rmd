@@ -18,11 +18,8 @@ Pensando sobre isso, levantamos o questionamento: seria possível predizer se um
 Para esta tarefa utilizaremos o seguinte conjunto de dados: Goodreads-books | Kaggle  e como inspiração para construção do modelo utilizaremos o seguinte guia: Tune xgboost models with early stopping to predict shelter animal status | Julia Silge
 
 Assim, uma das possibilidades que foram pensadas é fazer uma categorização das avaliações dos livros em “Ruim”, “Bom” e ''Ótimo”, considerando respectivamente os intervalos de nota de [0, 3.5), de [3.5, 4] e de (4, 5], e a partir daí predizer a avaliação dos livros utilizando o XGboost. O critério de intervalo para as categorias das notas foi definido subjetivamente ao acaso entre as participantes do grupo. 
-Além disso, como o objetivo é classificar os livros sem olhar as avaliações, as notas não farão parte do modelo, elas serão utilizadas apenas para criar as categorias e estamos supondo que de alguma forma as variáveis como número de páginas, idade do livro, editora, quantidade de notas de avaliações e quantidade de avaliações escritas estão relacionadas com a avaliação do livro.
 
-[ ACHO QUE ISSO NÃO É PARA ADICIONAR
-Ficamos curiosas com outros pontos que podemos incluir no modelo, tais como: será que o mês em que o livro foi lançado influencia? Ou o gênero do autor? 
-Dado que temos a variável com o nome dos autores, podemos predizer o gênero por meio de pacotes como Gender e genderdata. Um empecilho para usar esses pacotes é o fato de que alguns autores constam no conjunto de dados com nomes abreviados, por isso essa ideia ainda está em análise. ]
+Além disso, como o objetivo é classificar os livros sem olhar as avaliações, as notas não farão parte do modelo, elas serão utilizadas apenas para criar as categorias e estamos supondo que de alguma forma as variáveis como número de páginas, idade do livro, editora, quantidade de notas de avaliações e quantidade de avaliações escritas estão relacionadas com a avaliação do livro.
 
 
 # Análise exploratória
@@ -43,6 +40,7 @@ library(tidyverse)
 library(tidymodels)
 library(lubridate)
 library(vip)
+library(GGally)
 
 theme_set(theme_light(base_family = "IBMPlexSans"))
 ```
@@ -114,7 +112,7 @@ summary(livros)
 
 ```
 
-50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
+50% das observações estão entre [0,3.96] e o 1º Q é 3.77, que é bem próximo, mostrando que há uma concentração de avaliações, verificando o histograma dessa variável temos:
 
 ```{r}
 livros %>% 
@@ -140,9 +138,9 @@ livros %>%
   count()
 ```
 
-Dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] e bom no intervalo de (3,5], uma vez que pelo histograma é percebido ter poucas notas acima de 4 também. 
+Dessa forma, trabalharemos apenas com três categorias, “Ruim”, “Bom” e ''Ótimo”, considerando respectivamente os intervalos de nota de [0, 3.5), de [3.5, 4] e de (4, 5], uma vez que pelo histograma é notado a distribuição nas avaliações de 3 a 5. 
 
-Sendo assim, nosso conjunto de dados final é composto por duas categorias: regular e bom. Aplicando no conjunto de dados:
+Sendo assim, nosso conjunto de dados final é composto por três categorias: “Ruim”, “Bom” e ''Ótimo”. Aplicando no conjunto de dados:
 
 ```{r}
 livros <- livros %>% 
@@ -180,7 +178,7 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
                             levels = c("Ótimo","Bom","Ruim")))
 ```
 
-#### Separando em Treino e Teste
+### Separando em Treino e Teste
 
 ```{r}
 set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
@@ -193,10 +191,10 @@ livros_teste <- testing(livros_split)
 
 ```
 
-####Verificando a correlação das variáveis quantitativas
+### Verificando a correlação das variáveis quantitativas
+
 ```{r}
 
-library(GGally)
 
 livros_treino %>% 
   select(where(is.numeric)) %>% 
@@ -217,6 +215,7 @@ cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
     use = "complete", method = "spearman")
 ```
 
+
 ```{r message=FALSE, warning=FALSE}
 livros_treino %>% 
   select(where(is.numeric),book_rating) %>% 
@@ -232,6 +231,7 @@ livros_treino %>%
 
 ```
 
+Pelos box-plots é notado que as distribuições das classificações de acordo com as variáveis há poucas diferenças entre si. 
 ```{r message=FALSE, warning=FALSE}
 grafico_otimos_mes_ano <- livros_treino %>% 
   mutate(book_rating = book_rating == "Ótimo") %>% 
@@ -248,6 +248,8 @@ grafico_otimos_mes_ano <- livros_treino %>%
   theme(legend.position = "right");grafico_otimos_mes_ano
 
 ```
+
+É observado que há uma maior avaliação de livros a partir dos anos 80 até em torno do ano de 2012.Nesses anos tiveram muitas avaliações de livros e a porcentagem de avaliação para ótimo está em torno de 25% a 75% em sua maioria.
 
 Verificando a distribuição de livros publicados ao longo dos anos temos
 
@@ -273,7 +275,7 @@ livros_treino %>%
 
 ```
 
-Como o boxplot apresentou muitos outliers e percebemos uma conscentração nos dados iremos realizar uns filtros para melhorar a modelagem:
+Como o boxplot apresentou muitos outliers e percebemos uma concentração nos dados iremos realizar uns filtros para melhorar a modelagem:
 
 ```{r}
 gridExtra::grid.arrange(ncol=2,
@@ -315,6 +317,7 @@ livros_treino %>%
 )
 ```
 
+[FALAR SOBRE OS HISTOGRAMAS]
 E agora o novo boxplot com os filtros aplicados:
 
 ```{r}
@@ -333,6 +336,10 @@ livros_treino %>%
        title = "Boxplot das variáveis por classificação do livro")+
   scale_fill_viridis_d()
 ```
+
+Com as mudanças feitas, houve uma diferença notável nas distribuições da idade do livro, número de páginas e avaliações, as amplitudes e variações em comparação aos box-plots anteriores.
+As contagens de avaliações, na classificação ótimas a amplitude e a variação é maior que as demais, se assemelha a classificação "Bom", "Ruim" é a que possui mais outliers mas sua amplitude e vaiação é a menor.
+
 
 
 # Modelagem
@@ -370,7 +377,7 @@ set.seed(1989)
 (livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10))
 ```
 
-## Pre-processamento dos Dados
+### Pre-processamento dos Dados
 
 ```{r}
 livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
@@ -387,7 +394,7 @@ head(prep(livros_rec) %>%
 ```
 
 
-## Grid de Procura, Tune e  Parada antecipada
+### Grid de Procura, Tune e  Parada antecipada
 ```{r}
 stopping_spec <-
   boost_tree(
@@ -419,10 +426,15 @@ stopping_rs <- tune_grid(
 )
 ```
 
-##Avaliação do Modelo
+### Avaliação do Modelo
 
 ```{r}
 autoplot(stopping_rs)
+
+```
+
+
+```{r}
 
 show_best(stopping_rs, metric = "mn_log_loss")
 
@@ -434,17 +446,41 @@ stopping_fit
 
 collect_metrics(stopping_fit)
 
-library(vip)
-
 extract_workflow(stopping_fit) %>%
   extract_fit_parsnip() %>%
   vip(num_features = 15, geom = "point")+
   ggtitle("Variáveis mais importantes no modelo")
 
+
+```
+
+As variáveis mais importantes para o modelo são os número de páginas, contagem de avaliações, comentários de textos e a idade do livro.
+
+O que faz sentido pois a junção dessas variáveis para fazer uma classificação,
+É difícil ter muitos livros com muitas páginas, conseguir seguir uma linha de raciocínio e uma trama na qual prenda o leitor. Além disso, quanto mais páginas provavelmente mais caro será o livro.
+
+Principalmente,atualmente, a questão de um livro está sendo muito avaliado, muito divulgado nas redes, faz com que mais pessoas queiram consumir eles, tanto pela curiosidade de saber por que ele é tão bem avaliado e descutido.
+Em relação a idade
+
+A idade do livro é um fator interessante, há os livros que se tornam clássicos, os que são deixados de lado e os que é possível fazer sucesso mesmo com um certo tempo de publicação.
+
+```{r}
+
 collect_predictions(stopping_fit) %>%
   conf_mat(book_rating, .pred_class) %>%
   autoplot(type = "heatmap")+
   ggtitle("Mapa de Calor das Predições")
+
+```
+
+O modelo não foi o melhor, principalmente para avaliar "Ótimo" e "Bom".
+
+Dos livros classificados como "Ótimo", o modelo classificou 189 como "Bom" e 146 como "Ruim".
+
+Dos livros classificados como "Bom", o modelo classificou 200 como "Ótimo" e 209 como "Ruim".
+
+
+```{r}
 
 collect_predictions(stopping_fit, summarize = FALSE) %>%
   roc_curve(book_rating, .pred_class:.pred_Ruim) %>%
@@ -455,6 +491,10 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
   labs(color = NULL,
        title =  "Curva ROC Modelo Final")
 
+```
+
+```{r}
+
 ## Verdadeiro positivo
 collect_predictions(stopping_fit, summarize = TRUE) %>% 
   sens(book_rating, .pred_class)
@@ -464,6 +504,4 @@ collect_predictions(stopping_fit, summarize = TRUE) %>%
   spec(book_rating, .pred_class)
 
 ```
-
-
 
