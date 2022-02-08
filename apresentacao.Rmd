@@ -1,7 +1,7 @@
 ---
-title: "Untitled"
+title: "Modelagem XGBOOST para a classificação de avaliações de livros"
 author: 
-- Ana Luzielma \newline
+- Ana Luzielma Campos \newline
 - Jaylhane Nunes \newline
 - Raianny Soares
 date: "07/02/2022"
@@ -48,8 +48,12 @@ opts_chunk$set(message=FALSE,
                results="asis",
                cache = TRUE, 
                dev = "png",
-               dpi = 500
+               dpi = 500,
+               fig.height = 4,
+               fig.width = 6
                )
+
+options(digits = 4)
 
 # paralelizacao - este código fará com que seu computador
 # rode trechos do código em paralelo, de modo a reduzir
@@ -72,7 +76,7 @@ Motivadas pelo interesse comum em leitura optamos por realizar a análise de um 
 
 O conjunto de dados selecionado possui **11.131 observações**, foi gerado por meio de **raspagem** de dados na **API** da plataforma **GoodReads** e disponibilizado por **_Soumik_** no site **Kagle**. 
 
-Nele é possível encontras as seguintes colunas:
+Nele é possível encontrar as 12 colunas seguintes:
 ```{r, echo=FALSE}
 nomes_df_livros <- names(read.csv("./Conjunto de Dados/books.csv",
                                   encoding = "UTF-8",
@@ -100,9 +104,9 @@ Chegamos a um consenso que diversos fatores influenciam na satisfação com a le
 
 ### Uma Ideia Inicial
 
-![](./Imagens/desempenho_xgboost_comparacao.png){width=75%}
+![Vishal Morde, 2019 - XGBoost Algorithm: Long May She Reign!](./Imagens/desempenho_xgboost_comparacao.png){width=75%}
 
-Dentre as leituras realizadas sobre as possibilidades de modelos e métodos, percebemos que o XGboost tinha um ótimo desempenho comparado a outros modelos, e que, apesar da variável `average_rating` ser uma variável contínua um método de classificação poderia ser adequado para os nossos objetivos, desde que gerassemos categorias e encaixassemos os intervalos. 
+Dentre as possibilidades percebemos que o **XGboost** tem um ótimo desempenho comparado a outros e que, apesar da nossa variável de avaliação ser uma variável contínua, um método de classificação poderia ser adequado, desde que encaixássemos intervalos em categorias. 
 
 ### A Inspiração Final
 
@@ -124,7 +128,7 @@ A análise exploratória consistiu em:
 - Limpeza dos Dados
 - Análise Descritiva
 
-Dado os nossos objetivos, percebemos que algumas colunas eram dispensáveis e outras poderiam ser transformadas, de forma que:  
+Dado os nossos objetivos percebemos que algumas colunas eram dispensáveis e outras poderiam ser transformadas, de forma que:  
 
 ```{r cars, echo=FALSE}
 excluidas <- c(nomes_df_livros[1,c(1)],
@@ -139,7 +143,7 @@ Transfomadas <- c(nomes_df_livros[1,c(2,3,4)],
 Geradas <- c("book_rating¹",
              "",
              "prop_text_reviews²",
-             "",
+             "book_age",
              "",
              "")
 
@@ -195,7 +199,7 @@ livros_treino %>%
 Com o resultado anterior percebemos que: 
 
 - Correlação forte entre `text_reviews_count` e `ratings_count`. 
-- Pensamos em gerar uma variável que considerasse a quantidade de `text_reviews_count`,pois consideramos que isso seria um indicativo importante para nossa resposta e chegamos a uma variável que correspondesse a proporção entre `text_reviews_count`/`ratings_count`
+- Seria necessário descartar `text_reviews_count` devido riscos de multicolineariedade, mas como consideramos as avaliações escritas relevantes para as categorias _ruim_ e _ótimo_ usamos a proporção entre `text_reviews_count`/`ratings_count`. 
 
 ```{r}
 livros_treino <- livros_treino %>% 
@@ -206,7 +210,7 @@ cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
     use = "complete", method = "spearman")
 ```
 
-- A correlação entre `prop_text_reviews`e `ratings_count` não indicou multicolinearidade, então prosseguimos com essa variável como preditora.
+- A correlação entre `prop_text_reviews` e `ratings_count` não indicou multicolinearidade, então prosseguimos com essa variável como preditora.
 
 ### Continuando a Análise Exploratória e Descritiva
 
@@ -215,7 +219,7 @@ livros_treino %>%
   select(where(is.numeric),book_rating) %>% 
   pivot_longer(-book_rating) %>% 
   ggplot(.,aes(fill = book_rating)) +
-  geom_boxplot(aes(y=value)) +
+  geom_boxplot(aes(y=value),alpha=.75) +
   facet_wrap(~ name, scales = "free") +
   labs(x="",
        y="Valor",
@@ -224,7 +228,7 @@ livros_treino %>%
   scale_fill_viridis_d()
 ```
 
-### Continuando a Análise Exploratória e Descritiva
+### Conferindo aspectos que consideramos importantes
 
 ```{r, echo=FALSE}
 livros_treino %>% 
@@ -236,7 +240,7 @@ livros_treino %>%
   summarise(book_rating = mean(book_rating)) %>% 
   ggplot(aes(mes,ano, fill = book_rating)) + 
   geom_tile(alpha = .75) + 
-  scale_fill_viridis_c(labels = scales::percent) + 
+  scale_fill_viridis_c(labels = scales::percent, direction = -1) + 
   labs(fill = "% livros ótimos" , x="Mês", y="Ano",
        title = "Escala dos livros avaliados como: ÓTIMO")+
   theme(legend.position = "right")
@@ -262,7 +266,7 @@ livros_treino %>%
        y = "Ano",
        fill = "Mês",
        title = "Quantidade de Publicações por Ano")+
-  scale_fill_viridis_d()
+  scale_color_brewer()
 ```
 
 ### Definindo Filtros
@@ -299,7 +303,10 @@ livros_treino %>%
 livros_treino %>% 
   ggplot(aes(x=prop_text_reviews)) +
   geom_histogram(bins=30)+
-  geom_vline(xintercept = quantile(livros_treino$prop_text_reviews, na.rm = TRUE),
+  geom_vline(xintercept = quantile(livros_treino$prop_text_reviews,
+                                   na.rm = TRUE),
+             color="green", lty=2)+
+  geom_vline(xintercept = 1,
              color="green", lty=2)+
   labs(title = "Histograma prop_text_reviews",
        x="",
@@ -317,7 +324,7 @@ livros_treino %>%
   select(where(is.numeric),book_rating) %>% 
   pivot_longer(-book_rating) %>% 
   ggplot(.,aes(fill = book_rating)) +
-  geom_boxplot(aes(y=value)) +
+  geom_boxplot(aes(y=value), alpha=.75) +
   facet_wrap(~ name, scales = "free") +
   labs(x="",
        y="Valor",
@@ -328,3 +335,228 @@ livros_treino %>%
 
 ## A modelagem
 
+
+- Com as análises identificamos mudanças necessárias no conjunto de dados, demandando nova divisão em **treino** e **teste**. Os filtros aplicados foram:
+
+```{r, echo=FALSE}
+livros <- read.csv("./Conjunto de Dados/books_t.csv",
+                   encoding = "UTF-8") %>% 
+  mutate(publication_date=as.Date(publication_date),  
+         prop_text_reviews = text_reviews_count / ratings_count,
+         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf),
+                                    0, prop_text_reviews),
+         book_rating=factor(book_rating,
+                            levels = c("Ótimo","Bom","Ruim"))) %>% 
+  select(-month_publication, -year_publication, -text_reviews_count) %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>% 
+  filter(ratings_count<1000)
+
+#####Separando Treino e Teste#####
+
+set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
+
+livros_split <- initial_split(livros, prop = .75, strata = book_rating)
+
+livros_treino <- training(livros_split)
+
+livros_teste <- testing(livros_split)
+
+filtros <- data.frame(c("book_age","num_pages","rating_count","prop_text_reviews"),
+                      c("<40","<1000","<1000","Nenhum"))
+
+names(filtros) <- c("Variável","Filtro")
+
+kable(filtros,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+
+```
+
+- Posteriormente criamos métricas e _folds_ que serão utilizadas para _tunar_ o módelo:
+
+```{r}
+livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss)
+
+set.seed(1989)
+livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10)
+```
+
+- E em seguida as demais etapas da modelagem:
+
+### Pré-Processamento de Dados
+
+```{r}
+livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
+  themis::step_downsample(book_rating) %>% 
+  step_date(publication_date, features = c("month"), 
+            keep_original_cols = FALSE) %>%
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
+  step_zv(all_predictors()) %>% 
+  step_normalize(all_numeric_predictors())%>% 
+  prep()
+
+```
+
+### Grid de Procura e de Parada antecipada
+
+```{r}
+stopping_spec <-
+  boost_tree(
+    trees = 500,
+    mtry = tune(),
+    learn_rate = tune(),
+    stop_iter = tune()
+  ) %>%
+  set_engine("xgboost", validation = 0.2) %>%
+  set_mode("classification")
+stopping_grid <-
+  grid_latin_hypercube(
+    mtry(range = c(5, 18)),
+    learn_rate(range = c(-5, -1)), 
+    stop_iter(range = c(10, 50)), 
+    size = 10
+  )
+early_stop_wf <- workflow(livros_rec, stopping_spec)
+```
+
+#### Definido os grids de procura e parada, é hora de **TUNAR** o modelo! 
+
+```{r}
+doParallel::registerDoParallel()
+set.seed(2022)
+stopping_rs <- tune_grid(
+  early_stop_wf,
+  livros_folds,
+  grid = stopping_grid,
+  metrics = livros_metricas
+)
+```
+
+## Resultados
+
+### Interações e Taxa de Aprendizagem
+
+```{r, echo=FALSE}
+autoplot(stopping_rs)
+```
+
+### Avaliação do modelo
+
+- Avaliando o melhor resultado de acordo com **mn_log_loss**, pois é com ele que acompanhamos a capacidade de aprendizagem do modelo:
+```{r, results='hide', eval=FALSE}
+show_best(stopping_rs, metric = "mn_log_loss")
+```
+
+```{r, echo=FALSE}
+melhores <- show_best(stopping_rs, metric = "mn_log_loss")
+
+kable(melhores[,c(1,2,3,6,7,8,9)],booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+```
+
+- Em seguida realizamos o modelo final e avaliamos as demais métricas:
+
+```{r, results='hide'}
+stopping_fit <- early_stop_wf %>%
+  finalize_workflow(select_best(stopping_rs, "mn_log_loss")) %>%
+  last_fit(livros_split)
+
+collect_metrics(stopping_fit)
+```
+
+```{r, echo=FALSE}
+kable(collect_metrics(stopping_fit),booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+```
+
+### Variáveis VIP
+
+```{r, echo=FALSE}
+library(vip)
+
+extract_workflow(stopping_fit) %>%
+  extract_fit_parsnip() %>%
+  vip(num_features = 15, geom = "point")+
+  labs(title = "Variáveis mais importantes no modelo",
+       x = "Importância")
+```
+
+### _Heatmap_
+
+```{r, echo=FALSE}
+collect_predictions(stopping_fit) %>%
+  conf_mat(book_rating, .pred_class) %>%
+  autoplot(type = "heatmap")+
+  labs(title = "Mapa de Calor das Predições",
+       x = "Verdadeiro",
+       y = "Predição")
+```
+
+### Avaliando a Curva ROC
+
+```{r, echo=FALSE}
+collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = .level)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(alpha = 0.8, size = 1) +
+  coord_equal() +
+  labs(color = NULL,
+       title =  "Curva ROC Modelo Final",
+       x="1 - Especificidade",
+       y="Sensibilidade")
+```
+
+# Conclusão
+
+### Se o modelo disser que o livro é ÓTIMO, desconfie...
+
+- Algumas métricas:
+
+```{r, echo=FALSE}
+## Verdadeiro positivo
+senbilidade_geral <- collect_predictions(stopping_fit) %>% 
+  sens(book_rating, .pred_class)
+
+## Verdadeiro negativo
+especificidade_geral <- collect_predictions(stopping_fit) %>% 
+  spec(book_rating, .pred_class)
+
+sens_e_spec_categorias <- collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>% 
+  group_by(.level) %>% 
+  summarise(mean_sens=mean(sensitivity),
+            mean_spec=mean(specificity))
+
+kable(senbilidade_geral,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+
+kable(especificidade_geral,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+
+kable(sens_e_spec_categorias,booktabs= TRUE) %>% 
+  kable_styling(latex_options = "HOLD_position", position = "center")
+```
+
+### Mais algumas considerações...
+
+- A parte da engenharia de dados, como já comentada, além de desafiadora realiza importante papel na qualidade do modelo
+
+- Algumas mudanças poderiam melhorar o modelo, tais como: 
+    - uma melhora na limpeza dos dados, removendo ainda mais outliers;
+    - melhor definição nos níveis e categorias das variáveis preditoras;
+    - variáveis preditoras mais informativas e com mais distinção entre os níveis. 
+    
+- Por fim, não consideramos satisfatório a capacidade preditora do modelo e concluímos que a melhor forma de saber se um livro é _ótimo_, _bom_ ou _ruim_, é lendo-o. ;) 
+
+### Referências:
+
+- MORDE, Vishal. **XGBoost Algorithm: Long May She Reign!** - Abril, 2019. Publicado em _Towards Data Science_. Disponível em: [https://towardsdatascience.com/https-medium-com-vishalmorde-xgboost-algorithm-long-she-may-rein-edd9f99be63d ](https://towardsdatascience.com/https-medium-com-vishalmorde-xgboost-algorithm-long-she-may-rein-edd9f99be63d)
+
+- SILGE, Julia. **Tune xgboost models with early stopping to predict shelter animal status** - Agosto, 2021. Publicado em Julia Silge. Disponível em: [https://juliasilge.com/blog/shelter-animals/](https://juliasilge.com/blog/shelter-animals/)
+
+- R Core Team (2021). **R:_A language and environment for statistical
+  computing_** . R Foundation for Statistical Computing, Vienna, Austria.
+  URL https://www.R-project.org/.
+
+- SOUMIK . **Goodreads-books _comprehensive list of books listed in goodreads_** - Maio, 2019. Publicado em Kagle. Disponível em: [https://www.kaggle.com/jealousleopard/goodreadsbooks](https://www.kaggle.com/jealousleopard/goodreadsbooks)

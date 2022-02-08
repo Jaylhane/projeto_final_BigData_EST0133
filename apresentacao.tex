@@ -79,8 +79,8 @@
 \IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
 \IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
 \hypersetup{
-  pdftitle={Untitled},
-  pdfauthor={Ana Luzielma ; Jaylhane Nunes ; Raianny Soares},
+  pdftitle={Modelagem XGBOOST para a classificação de avaliações de livros},
+  pdfauthor={Ana Luzielma Campos ; Jaylhane Nunes ; Raianny Soares},
   hidelinks,
   pdfcreator={LaTeX via pandoc}}
 \urlstyle{same} % disable monospaced font for URLs
@@ -155,9 +155,9 @@
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
 
-\title{Untitled}
-\author{Ana Luzielma \newline \and Jaylhane Nunes \newline \and Raianny
-Soares}
+\title{Modelagem XGBOOST para a classificação de avaliações de livros}
+\author{Ana Luzielma Campos \newline \and Jaylhane Nunes
+\newline \and Raianny Soares}
 \date{07/02/2022}
 
 \begin{document}
@@ -178,7 +178,7 @@ gerado por meio de \textbf{raspagem} de dados na \textbf{API} da
 plataforma \textbf{GoodReads} e disponibilizado por
 \textbf{\emph{Soumik}} no site \textbf{Kagle}.
 
-Nele é possível encontras as seguintes colunas:
+Nele é possível encontrar as 12 colunas seguintes:
 
 \begin{table}[H]
 \centering
@@ -200,15 +200,17 @@ considerado: \emph{ruim}, \emph{bom} ou \emph{ótimo} .
 \hypertarget{uma-ideia-inicial}{%
 \subsubsection{Uma Ideia Inicial}\label{uma-ideia-inicial}}
 
-\begin{frame}[fragile]{Uma Ideia Inicial}
+\begin{frame}{Uma Ideia Inicial}
+\begin{figure}
+\centering
 \includegraphics[width=0.75\textwidth,height=\textheight]{./Imagens/desempenho_xgboost_comparacao.png}
+\caption{Vishal Morde, 2019 - XGBoost Algorithm: Long May She Reign!}
+\end{figure}
 
-Dentre as leituras realizadas sobre as possibilidades de modelos e
-métodos, percebemos que o XGboost tinha um ótimo desempenho comparado a
-outros modelos, e que, apesar da variável \texttt{average\_rating} ser
-uma variável contínua um método de classificação poderia ser adequado
-para os nossos objetivos, desde que gerassemos categorias e
-encaixassemos os intervalos.
+Dentre as possibilidades percebemos que o \textbf{XGboost} tem um ótimo
+desempenho comparado a outros e que, apesar da nossa variável de
+avaliação ser uma variável contínua, um método de classificação poderia
+ser adequado, desde que encaixássemos intervalos em categorias.
 \end{frame}
 
 \hypertarget{a-inspirauxe7uxe3o-final}{%
@@ -227,7 +229,7 @@ encaixassemos os intervalos.
 \begin{itemize}
 \tightlist
 \item
-  \emph{Agora, ao nosso modelo!}
+  \emph{Agora, à nossa análise!}
 \end{itemize}
 \end{frame}
 
@@ -248,7 +250,7 @@ A análise exploratória consistiu em:
   Análise Descritiva
 \end{itemize}
 
-Dado os nossos objetivos, percebemos que algumas colunas eram
+Dado os nossos objetivos percebemos que algumas colunas eram
 dispensáveis e outras poderiam ser transformadas, de forma que:
 
 \begin{table}[H]
@@ -260,7 +262,7 @@ Excluídas & Transfomadas & Geradas\\
 bookID & average\_rating & book\_rating¹\\
 title & language\_code & \\
 isbn & text\_reviews\_count & prop\_text\_reviews²\\
-authors & publication\_date & \\
+authors & publication\_date & book\_age\\
 isbn13 &  & \\
 \addlinespace
 publisher &  & \\
@@ -332,11 +334,10 @@ Com o resultado anterior percebemos que:
   Correlação forte entre \texttt{text\_reviews\_count} e
   \texttt{ratings\_count}.
 \item
-  Pensamos em gerar uma variável que considerasse a quantidade de
-  \texttt{text\_reviews\_count},pois consideramos que isso seria um
-  indicativo importante para nossa resposta e chegamos a uma variável
-  que correspondesse a proporção entre
-  \texttt{text\_reviews\_count}/\texttt{ratings\_count}
+  Seria necessário descartar \texttt{text\_reviews\_count} devido riscos
+  de multicolineariedade, mas como consideramos as avaliações escritas
+  relevantes para as categorias \emph{ruim} e \emph{ótimo} usamos a
+  proporção entre \texttt{text\_reviews\_count}/\texttt{ratings\_count}.
 \end{itemize}
 
 \begin{Shaded}
@@ -350,12 +351,12 @@ Com o resultado anterior percebemos que:
 \end{Highlighting}
 \end{Shaded}
 
-{[}1{]} -0.3605444
+{[}1{]} -0.3605
 
 \begin{itemize}
 \tightlist
 \item
-  A correlação entre \texttt{prop\_text\_reviews}e
+  A correlação entre \texttt{prop\_text\_reviews} e
   \texttt{ratings\_count} não indicou multicolinearidade, então
   prosseguimos com essa variável como preditora.
 \end{itemize}
@@ -369,11 +370,11 @@ Descritiva}\label{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva}}
 \includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-7-1.png}
 \end{frame}
 
-\hypertarget{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva-1}{%
-\subsubsection{Continuando a Análise Exploratória e
-Descritiva}\label{continuando-a-anuxe1lise-exploratuxf3ria-e-descritiva-1}}
+\hypertarget{conferindo-aspectos-que-consideramos-importantes}{%
+\subsubsection{Conferindo aspectos que consideramos
+importantes}\label{conferindo-aspectos-que-consideramos-importantes}}
 
-\begin{frame}{Continuando a Análise Exploratória e Descritiva}
+\begin{frame}{Conferindo aspectos que consideramos importantes}
 \includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-8-1.png}
 \end{frame}
 
@@ -401,5 +402,313 @@ aplicados}\label{novo-boxplot-com-filtros-aplicados}}
 
 \hypertarget{a-modelagem}{%
 \subsection{A modelagem}\label{a-modelagem}}
+
+\begin{frame}[fragile]{A modelagem}
+\begin{itemize}
+\tightlist
+\item
+  Com as análises identificamos mudanças necessárias no conjunto de
+  dados, demandando nova divisão em \textbf{treino} e \textbf{teste}. Os
+  filtros aplicados foram:
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+Variável & Filtro\\
+\midrule
+book\_age & <40\\
+num\_pages & <1000\\
+rating\_count & <1000\\
+prop\_text\_reviews & Nenhum\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\tightlist
+\item
+  Posteriormente criamos métricas e \emph{folds} que serão utilizadas
+  para \emph{tunar} o módelo:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{livros\_metricas }\OtherTok{\textless{}{-}} \FunctionTok{metric\_set}\NormalTok{(accuracy, roc\_auc, mn\_log\_loss)}
+
+\FunctionTok{set.seed}\NormalTok{(}\DecValTok{1989}\NormalTok{)}
+\NormalTok{livros\_folds }\OtherTok{\textless{}{-}} \FunctionTok{vfold\_cv}\NormalTok{(livros\_treino, }\AttributeTok{strata =}\NormalTok{ book\_rating, }\AttributeTok{v=}\DecValTok{10}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\tightlist
+\item
+  E em seguida as demais etapas da modelagem:
+\end{itemize}
+\end{frame}
+
+\hypertarget{pruxe9-processamento-de-dados}{%
+\subsubsection{Pré-Processamento de
+Dados}\label{pruxe9-processamento-de-dados}}
+
+\begin{frame}[fragile]{Pré-Processamento de Dados}
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{livros\_rec }\OtherTok{\textless{}{-}} \FunctionTok{recipe}\NormalTok{(book\_rating }\SpecialCharTok{\textasciitilde{}}\NormalTok{ ., }\AttributeTok{data =}\NormalTok{ livros\_treino) }\SpecialCharTok{\%\textgreater{}\%}
+\NormalTok{  themis}\SpecialCharTok{::}\FunctionTok{step\_downsample}\NormalTok{(book\_rating) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{step\_date}\NormalTok{(publication\_date, }\AttributeTok{features =} \FunctionTok{c}\NormalTok{(}\StringTok{"month"}\NormalTok{), }
+            \AttributeTok{keep\_original\_cols =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{step\_dummy}\NormalTok{(}\FunctionTok{all\_nominal\_predictors}\NormalTok{(), }\AttributeTok{one\_hot =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{step\_zv}\NormalTok{(}\FunctionTok{all\_predictors}\NormalTok{()) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{step\_normalize}\NormalTok{(}\FunctionTok{all\_numeric\_predictors}\NormalTok{())}\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{prep}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+\end{frame}
+
+\hypertarget{grid-de-procura-e-de-parada-antecipada}{%
+\subsubsection{Grid de Procura e de Parada
+antecipada}\label{grid-de-procura-e-de-parada-antecipada}}
+
+\begin{frame}[fragile]{Grid de Procura e de Parada antecipada}
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{stopping\_spec }\OtherTok{\textless{}{-}}
+  \FunctionTok{boost\_tree}\NormalTok{(}
+    \AttributeTok{trees =} \DecValTok{500}\NormalTok{,}
+    \AttributeTok{mtry =} \FunctionTok{tune}\NormalTok{(),}
+    \AttributeTok{learn\_rate =} \FunctionTok{tune}\NormalTok{(),}
+    \AttributeTok{stop\_iter =} \FunctionTok{tune}\NormalTok{()}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{set\_engine}\NormalTok{(}\StringTok{"xgboost"}\NormalTok{, }\AttributeTok{validation =} \FloatTok{0.2}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{set\_mode}\NormalTok{(}\StringTok{"classification"}\NormalTok{)}
+\NormalTok{stopping\_grid }\OtherTok{\textless{}{-}}
+  \FunctionTok{grid\_latin\_hypercube}\NormalTok{(}
+    \FunctionTok{mtry}\NormalTok{(}\AttributeTok{range =} \FunctionTok{c}\NormalTok{(}\DecValTok{5}\NormalTok{, }\DecValTok{18}\NormalTok{)),}
+    \FunctionTok{learn\_rate}\NormalTok{(}\AttributeTok{range =} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{5}\NormalTok{, }\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{)), }
+    \FunctionTok{stop\_iter}\NormalTok{(}\AttributeTok{range =} \FunctionTok{c}\NormalTok{(}\DecValTok{10}\NormalTok{, }\DecValTok{50}\NormalTok{)), }
+    \AttributeTok{size =} \DecValTok{10}
+\NormalTok{  )}
+\NormalTok{early\_stop\_wf }\OtherTok{\textless{}{-}} \FunctionTok{workflow}\NormalTok{(livros\_rec, stopping\_spec)}
+\end{Highlighting}
+\end{Shaded}
+\end{frame}
+
+\begin{frame}[fragile]{Definido os grids de procura e parada, é hora de
+\textbf{TUNAR} o modelo!}
+\protect\hypertarget{definido-os-grids-de-procura-e-parada-uxe9-hora-de-tunar-o-modelo}{}
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{doParallel}\SpecialCharTok{::}\FunctionTok{registerDoParallel}\NormalTok{()}
+\FunctionTok{set.seed}\NormalTok{(}\DecValTok{2022}\NormalTok{)}
+\NormalTok{stopping\_rs }\OtherTok{\textless{}{-}} \FunctionTok{tune\_grid}\NormalTok{(}
+\NormalTok{  early\_stop\_wf,}
+\NormalTok{  livros\_folds,}
+  \AttributeTok{grid =}\NormalTok{ stopping\_grid,}
+  \AttributeTok{metrics =}\NormalTok{ livros\_metricas}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+\end{frame}
+
+\hypertarget{resultados}{%
+\subsection{Resultados}\label{resultados}}
+
+\hypertarget{interauxe7uxf5es-e-taxa-de-aprendizagem}{%
+\subsubsection{Interações e Taxa de
+Aprendizagem}\label{interauxe7uxf5es-e-taxa-de-aprendizagem}}
+
+\begin{frame}{Interações e Taxa de Aprendizagem}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-17-1.png}
+\end{frame}
+
+\hypertarget{avaliauxe7uxe3o-do-modelo}{%
+\subsubsection{Avaliação do modelo}\label{avaliauxe7uxe3o-do-modelo}}
+
+\begin{frame}[fragile]{Avaliação do modelo}
+\begin{itemize}
+\tightlist
+\item
+  Avaliando o melhor resultado de acordo com \textbf{mn\_log\_loss},
+  pois é com ele que acompanhamos a capacidade de aprendizagem do
+  modelo:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{show\_best}\NormalTok{(stopping\_rs, }\AttributeTok{metric =} \StringTok{"mn\_log\_loss"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rrrrrrl}
+\toprule
+mtry & learn\_rate & stop\_iter & mean & n & std\_err & .config\\
+\midrule
+16 & 0.0014 & 34 & 1.073 & 10 & 0.0032 & Preprocessor1\_Model03\\
+13 & 0.0716 & 46 & 1.073 & 10 & 0.0044 & Preprocessor1\_Model07\\
+5 & 0.0039 & 39 & 1.075 & 10 & 0.0058 & Preprocessor1\_Model02\\
+9 & 0.0079 & 19 & 1.076 & 10 & 0.0044 & Preprocessor1\_Model05\\
+9 & 0.0009 & 49 & 1.078 & 10 & 0.0028 & Preprocessor1\_Model04\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{itemize}
+\tightlist
+\item
+  Em seguida realizamos o modelo final e avaliamos as demais métricas:
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{stopping\_fit }\OtherTok{\textless{}{-}}\NormalTok{ early\_stop\_wf }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{finalize\_workflow}\NormalTok{(}\FunctionTok{select\_best}\NormalTok{(stopping\_rs, }\StringTok{"mn\_log\_loss"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{last\_fit}\NormalTok{(livros\_split)}
+
+\FunctionTok{collect\_metrics}\NormalTok{(stopping\_fit)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llrl}
+\toprule
+.metric & .estimator & .estimate & .config\\
+\midrule
+accuracy & multiclass & 0.4212 & Preprocessor1\_Model1\\
+roc\_auc & hand\_till & 0.6150 & Preprocessor1\_Model1\\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{frame}
+
+\hypertarget{variuxe1veis-vip}{%
+\subsubsection{Variáveis VIP}\label{variuxe1veis-vip}}
+
+\begin{frame}{Variáveis VIP}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-22-1.png}
+\end{frame}
+
+\hypertarget{heatmap}{%
+\subsubsection{\texorpdfstring{\emph{Heatmap}}{Heatmap}}\label{heatmap}}
+
+\begin{frame}{\emph{Heatmap}}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-23-1.png}
+\end{frame}
+
+\hypertarget{avaliando-a-curva-roc}{%
+\subsubsection{Avaliando a Curva ROC}\label{avaliando-a-curva-roc}}
+
+\begin{frame}{Avaliando a Curva ROC}
+\includegraphics{apresentacao_files/figure-beamer/unnamed-chunk-24-1.png}
+\end{frame}
+
+\hypertarget{conclusuxe3o}{%
+\section{Conclusão}\label{conclusuxe3o}}
+
+\hypertarget{se-o-modelo-disser-que-o-livro-uxe9-uxf3timo-desconfie}{%
+\subsubsection{Se o modelo disser que o livro é ÓTIMO,
+desconfie\ldots{}}\label{se-o-modelo-disser-que-o-livro-uxe9-uxf3timo-desconfie}}
+
+\begin{frame}{Se o modelo disser que o livro é ÓTIMO, desconfie\ldots{}}
+\begin{itemize}
+\tightlist
+\item
+  Algumas métricas:
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llr}
+\toprule
+.metric & .estimator & .estimate\\
+\midrule
+sens & macro & 0.4482\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llr}
+\toprule
+.metric & .estimator & .estimate\\
+\midrule
+spec & macro & 0.7109\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+.level & mean\_sens & mean\_spec\\
+\midrule
+Bom & 0.5144 & 0.5152\\
+Ótimo & 0.5516 & 0.3875\\
+Ruim & 0.6343 & 0.5184\\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{frame}
+
+\hypertarget{mais-algumas-considerauxe7uxf5es}{%
+\subsubsection{Mais algumas
+considerações\ldots{}}\label{mais-algumas-considerauxe7uxf5es}}
+
+\begin{frame}{Mais algumas considerações\ldots{}}
+\begin{itemize}
+\item
+  A parte da engenharia de dados, como já comentada, além de desafiadora
+  realiza importante papel na qualidade do modelo
+\item
+  Algumas mudanças poderiam melhorar o modelo, tais como:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    uma melhora na limpeza dos dados, removendo ainda mais outliers;
+  \item
+    melhor definição nos níveis e categorias das variáveis preditoras;
+  \item
+    variáveis preditoras mais informativas e com mais distinção entre os
+    níveis.
+  \end{itemize}
+\item
+  Por fim, não consideramos satisfatório a capacidade preditora do
+  modelo e concluímos que a melhor forma de saber se um livro é
+  \emph{ótimo}, \emph{bom} ou \emph{ruim}, é lendo-o. ;)
+\end{itemize}
+\end{frame}
+
+\hypertarget{referuxeancias}{%
+\subsubsection{Referências:}\label{referuxeancias}}
+
+\begin{frame}{Referências:}
+\begin{itemize}
+\item
+  MORDE, Vishal. \textbf{XGBoost Algorithm: Long May She Reign!} -
+  Abril, 2019. Publicado em \emph{Towards Data Science}. Disponível em:
+  \url{https://towardsdatascience.com/https-medium-com-vishalmorde-xgboost-algorithm-long-she-may-rein-edd9f99be63d}
+\item
+  SILGE, Julia. \textbf{Tune xgboost models with early stopping to
+  predict shelter animal status} - Agosto, 2021. Publicado em Julia
+  Silge. Disponível em:
+  \url{https://juliasilge.com/blog/shelter-animals/}
+\item
+  R Core Team (2021). \textbf{R:\emph{A language and environment for
+  statistical computing}} . R Foundation for Statistical Computing,
+  Vienna, Austria. URL \url{https://www.R-project.org/}.
+\item
+  SOUMIK . \textbf{Goodreads-books \emph{comprehensive list of books
+  listed in goodreads}} - Maio, 2019. Publicado em Kagle. Disponível em:
+  \url{https://www.kaggle.com/jealousleopard/goodreadsbooks}
+\end{itemize}
+\end{frame}
 
 \end{document}

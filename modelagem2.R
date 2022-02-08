@@ -10,7 +10,8 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
   mutate(publication_date=as.Date(publication_date),  
          prop_text_reviews = text_reviews_count / ratings_count,
-         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf), 0, prop_text_reviews),
+         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf),
+                                    0, prop_text_reviews),
          book_rating=factor(book_rating,
                             levels = c("Ótimo","Bom","Ruim"))) %>% 
   select(-month_publication, -year_publication, -text_reviews_count) %>% 
@@ -45,8 +46,9 @@ livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   step_date(publication_date, features = c("month"), 
             keep_original_cols = FALSE) %>%
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
-  step_zv(all_numeric_predictors()) %>% 
+  step_zv(all_predictors()) %>% 
   #step_pca(all_predictors(),threshold = .80) %>% 
+  step_normalize(all_numeric_predictors()) %>% 
   prep()
 
 prep(livros_rec) %>% 
@@ -125,7 +127,9 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
   geom_path(alpha = 0.8, size = 1) +
   coord_equal() +
   labs(color = NULL,
-       title =  "Curva ROC Modelo Final")
+       title =  "Curva ROC Modelo Final",
+       x="1 - especificidade",
+       y="Sensibilidade")
 
 ## Verdadeiro positivo
 collect_predictions(stopping_fit) %>% 
@@ -134,3 +138,9 @@ collect_predictions(stopping_fit) %>%
 ## Verdadeiro negativo
 collect_predictions(stopping_fit) %>% 
   spec(book_rating, .pred_class)
+
+collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>% 
+  group_by(.level) %>% 
+  summarise(mean_sens=mean(sensitivity),
+            mean_spec=mean(specificity))
