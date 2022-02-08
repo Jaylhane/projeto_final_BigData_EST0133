@@ -6,7 +6,7 @@ author: |
   | Raianny da Silva Soares
 df_print: paged
 output:
-  html_document:
+  pdf_document:
     df_print: paged
 ---
 
@@ -29,19 +29,27 @@ Dado que temos a variável com o nome dos autores, podemos predizer o gênero po
 
 ## Limpeza dos dados
 
-```{r,, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
+library(knitr)
+opts_chunk$set(message=FALSE, 
+               warning=FALSE,
+               echo = TRUE,
+               #results="asis",
+               cache = TRUE,
+               dev = "png",
+               dpi = 500)
 #Pacotes necessários
 library(tidyverse)
 library(tidymodels)
 library(lubridate)
 library(vip)
 
-theme_set(theme_light())
+theme_set(theme_light(base_family = "IBMPlexSans"))
 ```
 
-```{r message=FALSE, warning=FALSE}
-#####Carregando os dados#####
+### Carregando os dados
 
+```{r}
 livros <- read.csv("./Conjunto de Dados/books.csv",
                    encoding = "UTF-8",
                    header = TRUE) %>% 
@@ -50,13 +58,9 @@ livros <- read.csv("./Conjunto de Dados/books.csv",
          -isbn, 
          -isbn13) %>% 
   na.omit()
-
-
 ```
 
-```{r message=FALSE, warning=FALSE}
-#####Tratando os dados#####
-
+```{r}
 summary(as.factor(livros$language_code))
 
 linhas_invalidas_de_language_code<- livros %>% 
@@ -71,27 +75,22 @@ livros <- livros %>%
 
 rm(linhas_invalidas_de_language_code)
 
-
-summary(as.factor(livros$publisher))
-
-
 ```
 
+### Verificando a língua
 
-```{r message=FALSE, warning=FALSE}
-       
-       
-#####Verificando a lingua#####
+```{r}
 
 livros %>% 
   ggplot(aes(language_code))+
   geom_bar()+
   coord_flip()
+```
 
-## Como há muito pouca variação linguistica comparado ao grupo inglês, 
-## dividiremos a categoria de `language_code` em duas: inglês e não inglês
+Como há muito pouca variação linguistica comparado ao grupo inglês, 
+dividiremos a categoria de `language_code` em duas: inglês e outros.
 
-
+```{r}
 livros <- livros %>% 
   mutate(publication_date = mdy(publication_date),
          average_rating = as.double(average_rating),
@@ -106,29 +105,28 @@ livros <- livros %>%
                                        "en-GB",
                                        "en-CA"),
                   "English","Other")
-           )
-         ) %>% 
+         )
+  ) %>% 
   select(-authors, -publisher) %>% 
   na.omit()
 
 summary(livros)
 
-
 ```
 
-```{r message=FALSE, warning=FALSE}
+50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
 
-# 50% das observações estão entre [0,3] e o 1º Q também é iqual a 3, verificando o histograma dessa variável temos:
-
+```{r}
 livros %>% 
   ggplot(aes(x=average_rating, after_stat(scaled)))+
   geom_histogram(aes(y=..density..),
                  bins = 15)+
   geom_density()+
   geom_vline(xintercept = c(3.5,4), color = "green", lty=2)
+```
 
-#e conferindo a quantidade de observações menores de 3 temos: 
-
+E conferindo a quantidade de observações menores de 3 temos:
+```{r}
 livros %>% 
   filter(average_rating<3.5) %>% 
   count()
@@ -140,12 +138,13 @@ quantile(livros$average_rating,.67)
 livros %>% 
   filter(average_rating>4) %>% 
   count()
+```
 
-# dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] 
-# e bom no intervalo de (3,5], uma vez que pelo histograma é percebido ter poucas notas acima de 4 também. 
+Dessa forma, trabalharemos apenas com duas categorias, sendo elas regular no intervalo de [0,3] e bom no intervalo de (3,5], uma vez que pelo histograma é percebido ter poucas notas acima de 4 também. 
 
-# Dessa forma, nosso conjunto de dados final é composto por duas categorias: regular e bom. Aplicando no conjunto de dados:
+Sendo assim, nosso conjunto de dados final é composto por duas categorias: regular e bom. Aplicando no conjunto de dados:
 
+```{r}
 livros <- livros %>% 
   mutate(
     book_rating =
@@ -164,18 +163,13 @@ livros %>%
 write.csv(livros, 
           "./Conjunto de Dados/books_t.csv",
           fileEncoding = "UTF-8",
-          row.names = FALSE)   
+          row.names = FALSE)
 
 ```
 
+## Análise Descritiva e Exploratória
 
-
-## Tratamento dos dados
-
-
-
-```{r message=FALSE, warning=FALSE}
-#####Carregando os Dados#####
+```{r, echo=FALSE}
 
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
@@ -186,9 +180,9 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
                             levels = c("Ótimo","Bom","Ruim")))
 ```
 
-```{r message=FALSE, warning=FALSE}
-#####Separando em Treino e Teste#####
+#### Separando em Treino e Teste
 
+```{r}
 set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
 
 livros_split <- initial_split(livros, prop = .75, strata = book_rating)
@@ -199,8 +193,8 @@ livros_teste <- testing(livros_split)
 
 ```
 
-```{r message=FALSE, warning=FALSE}
-#####Verificando a correlação das variáveis quantitativas#####
+####Verificando a correlação das variáveis quantitativas
+```{r}
 
 library(GGally)
 
@@ -208,15 +202,13 @@ livros_treino %>%
   select(where(is.numeric)) %>% 
   ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
 
-hist(livros_treino$text_reviews_count)
-
 ```
 
-```{r message=FALSE, warning=FALSE}
+Dado que identificamos alta correlação entre as variáveis `text_reviews_count`e `rating_count` a variável text será removida pois não necessariamente todo mundo que dá uma nota de avaliação também deixa uma avaliação escrita, o que inclusive explica a forte correlação entre essas variáveis, pois certamente todos que deixaram avaliação escrita também deixaram nota, no entanto, consideramos essa medida importante para avaliar se o livro é ótimo ou ruim, supondo que quando um livro for uma dessas duas opções as pessoas façam mais questão de comentar. 
 
-```
+Sendo assim, criaremos uma variável proporção:
 
-```{r message=FALSE, warning=FALSE}
+```{r}
 livros_treino <- livros_treino %>% 
   mutate(prop_text_reviews = text_reviews_count / ratings_count) %>% 
   select(-text_reviews_count)
@@ -224,7 +216,6 @@ livros_treino <- livros_treino %>%
 cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
     use = "complete", method = "spearman")
 ```
-
 
 ```{r message=FALSE, warning=FALSE}
 livros_treino %>% 
@@ -258,9 +249,9 @@ grafico_otimos_mes_ano <- livros_treino %>%
 
 ```
 
-```{r message=FALSE, warning=FALSE}
-# Verificando a distribuição de livros publicados ao longo dos anos temos:
+Verificando a distribuição de livros publicados ao longo dos anos temos
 
+```{r}
 livros_treino %>%  
   group_by(
     mes = month_publication,
@@ -282,17 +273,73 @@ livros_treino %>%
 
 ```
 
-```{r message=FALSE, warning=FALSE}
+Como o boxplot apresentou muitos outliers e percebemos uma conscentração nos dados iremos realizar uns filtros para melhorar a modelagem:
 
+```{r}
+gridExtra::grid.arrange(ncol=2,
+                        livros_treino %>% 
+  ggplot(aes(x=book_age)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$book_age),
+             color="green", lty=2)+
+  labs(title = "Histograma book_age",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=num_pages)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$num_pages),
+             color="green", lty=2)+
+  labs(title = "Histograma num_pages",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=ratings_count)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$ratings_count),
+             color="green", lty=2)+
+  labs(title = "Histograma ratings_count",
+       x="",
+       y="")
+,
+livros_treino %>% 
+  ggplot(aes(x=prop_text_reviews)) +
+  geom_histogram(bins=30)+
+  geom_vline(xintercept = quantile(livros_treino$prop_text_reviews, na.rm = TRUE),
+             color="green", lty=2)+
+  labs(title = "Histograma prop_text_reviews",
+       x="",
+       y="")
+)
+```
+
+E agora o novo boxplot com os filtros aplicados:
+
+```{r}
+livros_treino %>% 
+  filter(book_age<40) %>% 
+  filter(num_pages<1000) %>%
+  filter(ratings_count<1000) %>% 
+  select(where(is.numeric),book_rating) %>% 
+  pivot_longer(-book_rating) %>% 
+  ggplot(.,aes(fill = book_rating)) +
+  geom_boxplot(aes(y=value)) +
+  facet_wrap(~ name, scales = "free") +
+  labs(x="",
+       y="Valor",
+       fill = "Classificação\ndo Livro",
+       title = "Boxplot das variáveis por classificação do livro")+
+  scale_fill_viridis_d()
 ```
 
 
 # Modelagem
 
+Considerando as alterações sofridas no conjunto de dados após a análise exploratória, será necessário carregar novamente o conjunto de dados, bem como gerar novo conjunto de treino e teste:
 
-```{r,, message=FALSE, warning=FALSE}
-theme_set(theme_light(base_family = "IBMPlexSans"))
-
+```{r}
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
   mutate(publication_date=as.Date(publication_date),  
@@ -305,43 +352,27 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
   filter(num_pages<1000) %>% 
   filter(ratings_count<1000)
 
+set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
 
-```
+livros_split <- initial_split(livros, prop = .75, strata = book_rating)
 
+livros_treino <- training(livros_split)
 
-```{r,, message=FALSE, warning=FALSE}
-theme_set(theme_light(base_family = "IBMPlexSans"))
+livros_teste <- testing(livros_split)
 
-livros <- read.csv("./Conjunto de Dados/books_t.csv",
-                   encoding = "UTF-8") %>% 
-  mutate(publication_date=as.Date(publication_date),  
-         prop_text_reviews = text_reviews_count / ratings_count,
-         prop_text_reviews = ifelse(prop_text_reviews %in% c(NaN,Inf), 0, prop_text_reviews),
-         book_rating=factor(book_rating,
-                            levels = c("Ótimo","Bom","Ruim"))) %>% 
-  select(-month_publication, -year_publication, -text_reviews_count) %>% 
-  filter(book_age<40) %>% 
-  filter(num_pages<1000) %>% 
-  filter(ratings_count<1000)
-
-```
-
-```{r,, message=FALSE, warning=FALSE}
 #####Criando Métricas#####
 
-livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss)
+(livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss))
 
 #####Criando Folds#####
 
 set.seed(1989)
-livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10)
-livros_folds
-
+(livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10))
 ```
 
-```{r,, message=FALSE, warning=FALSE}
-#####Criando a receita - Pre-processamento de Dados#####
+## Pre-processamento dos Dados
 
+```{r}
 livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   themis::step_downsample(book_rating) %>% 
   step_date(publication_date, features = c("month"), 
@@ -351,20 +382,13 @@ livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   #step_pca(all_predictors(),threshold = .80) %>% 
   prep()
 
-prep(livros_rec) %>% 
-  bake(new_data =NULL)
-# 19 colunas
-# 2 colunas com PCA
-
-
-### TREINO E TESTE?
-
+head(prep(livros_rec) %>% 
+       bake(new_data =NULL))
 ```
 
 
-```{r,, message=FALSE, warning=FALSE}
- #####Grid de Procura e Parada antecipada#####
-
+## Grid de Procura, Tune e  Parada antecipada
+```{r}
 stopping_spec <-
   boost_tree(
     trees = 500,
@@ -385,12 +409,19 @@ stopping_grid <-
 
 early_stop_wf <- workflow(livros_rec, stopping_spec)
 
-
+doParallel::registerDoParallel()
+set.seed(2022)
+stopping_rs <- tune_grid(
+  early_stop_wf,
+  livros_folds,
+  grid = stopping_grid,
+  metrics = livros_metricas
+)
 ```
 
-```{r,, message=FALSE, warning=FALSE}
-#####Avaliação do Modelo#####
+##Avaliação do Modelo
 
+```{r}
 autoplot(stopping_rs)
 
 show_best(stopping_rs, metric = "mn_log_loss")
@@ -403,10 +434,8 @@ stopping_fit
 
 collect_metrics(stopping_fit)
 
+library(vip)
 
-```
-
-```{r,, message=FALSE, warning=FALSE}
 extract_workflow(stopping_fit) %>%
   extract_fit_parsnip() %>%
   vip(num_features = 15, geom = "point")+
@@ -417,9 +446,6 @@ collect_predictions(stopping_fit) %>%
   autoplot(type = "heatmap")+
   ggtitle("Mapa de Calor das Predições")
 
-```
-
-```{r,, message=FALSE, warning=FALSE}
 collect_predictions(stopping_fit, summarize = FALSE) %>%
   roc_curve(book_rating, .pred_class:.pred_Ruim) %>%
   ggplot(aes(1 - specificity, sensitivity, color = .level)) +
@@ -429,27 +455,15 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
   labs(color = NULL,
        title =  "Curva ROC Modelo Final")
 
-```
-
-
-```{r,, message=FALSE, warning=FALSE}
 ## Verdadeiro positivo
-collect_predictions(stopping_fit) %>% 
+collect_predictions(stopping_fit, summarize = TRUE) %>% 
   sens(book_rating, .pred_class)
 
 ## Verdadeiro negativo
-collect_predictions(stopping_fit) %>% 
+collect_predictions(stopping_fit, summarize = TRUE) %>% 
   spec(book_rating, .pred_class)
 
 ```
-
-
-# Conclusão
-
-
-
-
-
 
 
 

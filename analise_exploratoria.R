@@ -172,6 +172,7 @@ livros_treino %>%
 # não filtrar pela proporção, pois essa é uma resposta importante
 
 
+
 livros_treino %>% 
   filter(book_age<40) %>% 
   filter(num_pages<1000) %>%
