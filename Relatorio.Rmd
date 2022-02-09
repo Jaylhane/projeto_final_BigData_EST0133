@@ -4,6 +4,15 @@ author: |
   | Ana Luzielma Dias Campos
   | Jaylhane Veloso Nunes
   | Raianny da Silva Soares
+  
+header-includes:
+  - \usepackage[brazilian]{babel}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+  - \usepackage[utf8]{inputenc} 
+  - \usepackage{indentfirst}
+  - \setlength\parindent{22pt}
+  
 df_print: paged
 output:
   pdf_document:
@@ -462,7 +471,7 @@ No momento de definir os parâmetros da árvore de decisão é necessário defin
 
 No entanto, é necessário definir os parametros de taxa de aprendizagem, usualmente bons parametros de aprendizagem ficam abaixo de 0.1, de forma que escolhemos 5 niveis para turnar este parametro, assim como valores de 10 a 50 para definir a quantidade de interações antes do critério de parada, essas interações são justamente as interações durante o processo de  "ramificação" da árvore de decisão (não é a quantidade de ramos, mas quantas interações ele realiza na escolha dos ramos, dado que como o algoritmo atua em _paralelização_, ele pode tomar mais de uma decisão quanto a "_árvore_" ao mesmo tempo).
 
-Com relação ao grid de procura, ao invés de utilizarmos um grid regular, conforme visto na disciplina, optamos por um irregular que tentasse "varrer" de forma mais eficiente e mesclada as possibilidade de parâmetro, definindo 10 níveis, uma vez que estipulados 10 fold, assim conseguiriamos para cada fold testar um nível da busca dos parametros. Como resultado teriamos aproximadamente 50 modelos (5 níveis de taxa de aprendizado x 10 folds) para testar nossos parametros. 
+Com relação ao grid de procura, ao invés de utilizarmos um grid regular, conforme visto na disciplina, optamos por um irregular que tentasse "varrer" de forma mais eficiente e mesclada as possibilidade de parâmetro, definindo 10 níveis, uma vez que estipulamos 10 folds, assim conseguiriamos para cada fold testar um nível da busca dos parametros. Como resultado teriamos aproximadamente 50 modelos (5 níveis de taxa de aprendizado x 10 folds) para testar nossos parametros. 
 
 Nosso `workflow` carregou a receita e nossas especificações da árvore de decisão, com todos os passos anteriores culminando no `tune` do modelo com todas as especificações, busca de parametros e critérios de parada, que são necessários pois do contrário o *XGBoost* ficará indefinidamente buscando o melhor modelo, sendo que a partir do momento em que a capacidade de aprendizagem diminui (a taxa de `learn_rate` aumenta), ele pode parar. 
 
