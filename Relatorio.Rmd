@@ -1,5 +1,5 @@
 ---
-title: "Análise de avaliações de livros usando a técnica XGBOOST"
+title: "Modelagem XGBOOST para a classificação de avaliações de livros"
 author: |
   | Ana Luzielma Dias Campos
   | Jaylhane Veloso Nunes
@@ -13,20 +13,21 @@ output:
 
 # Introdução
 
-Quando se está procurando uma nova leitura, uma das coisas que pode ser observada é a avaliação do livro.De acordo com ela, pode-se ter uma ideia inicial se o livro é bom,se ele segue uma dinâmica que se está habituabo, já que muitas pessoas deram uma nota alta de avaliação.
+Quando se está procurando uma nova leitura, uma das coisas que pode ser observada é a avaliação do livro. De acordo com ela, pode-se ter uma ideia inicial se o livro é bom ou se ele segue uma dinâmica que se está habituado, já que muitas pessoas deram uma nota alta de avaliação.
 Pensando sobre isso, levantamos o questionamento: seria possível predizer se um livro é bom sem ter acesso a nota da avaliação? Dessa forma pensamos em realizar um modelo para classificar a avaliação de um livro.
-Para esta tarefa utilizaremos o seguinte conjunto de dados: Goodreads-books | Kaggle  e como inspiração para construção do modelo utilizaremos o seguinte guia: Tune xgboost models with early stopping to predict shelter animal status | Julia Silge
+Para esta tarefa utilizaremos o seguinte conjunto de dados: [Goodreads-books| Kaggle](https://www.kaggle.com/jealousleopard/goodreadsbooks) e como inspiração para construção do modelo utilizaremos o seguinte guia: [Tune xgboost models with early stopping to predict shelter animal status| Julia Silge.](https://juliasilge.com/blog/shelter-animals/)
 
-Assim, uma das possibilidades que foram pensadas é fazer uma categorização das avaliações dos livros em “Ruim”, “Bom” e ''Ótimo”, considerando respectivamente os intervalos de nota de [0, 3.5), de [3.5, 4] e de (4, 5], e a partir daí predizer a avaliação dos livros utilizando o XGboost. O critério de intervalo para as categorias das notas foi definido subjetivamente ao acaso entre as participantes do grupo. 
+Assim, uma das possibilidades é fazer uma categorização das avaliações dos livros em “Ruim”, “Bom” e ''Ótimo”, considerando respectivamente os intervalos das notas como, [0, 3.5), [3.5, 4] e (4, 5], e a partir daí predizer a avaliação dos livros utilizando o XGboost. O critério de intervalo para as categorias das notas foi definido subjetivamente ao acaso entre as participantes do grupo, tentando balancear a quantidade de observações que ficariam em cada grupo. 
 
 Além disso, como o objetivo é classificar os livros sem olhar as avaliações, as notas não farão parte do modelo, elas serão utilizadas apenas para criar as categorias e estamos supondo que de alguma forma as variáveis como número de páginas, idade do livro, editora, quantidade de notas de avaliações e quantidade de avaliações escritas estão relacionadas com a avaliação do livro.
 
 
 # Análise exploratória
 
-## Limpeza dos dados
+* Limpeza dos dados
 
 ```{r, message=FALSE, warning=FALSE}
+
 library(knitr)
 opts_chunk$set(message=FALSE, 
                warning=FALSE,
@@ -35,6 +36,7 @@ opts_chunk$set(message=FALSE,
                cache = TRUE,
                dev = "png",
                dpi = 500)
+
 #Pacotes necessários
 library(tidyverse)
 library(tidymodels)
@@ -43,11 +45,9 @@ library(vip)
 library(GGally)
 
 theme_set(theme_light(base_family = "IBMPlexSans"))
-```
 
-### Carregando os dados
+# Carregando os dados
 
-```{r}
 livros <- read.csv("./Conjunto de Dados/books.csv",
                    encoding = "UTF-8",
                    header = TRUE) %>% 
@@ -56,9 +56,15 @@ livros <- read.csv("./Conjunto de Dados/books.csv",
          -isbn, 
          -isbn13) %>% 
   na.omit()
+
 ```
 
+* Verificando a língua
+
+Análisando o conjunto de dados percebemos que algumas variáveis nos códigos da linguagem estavam em formato de númeração e precisaram ser removidas. 
+
 ```{r}
+
 summary(as.factor(livros$language_code))
 
 linhas_invalidas_de_language_code<- livros %>% 
@@ -75,7 +81,7 @@ rm(linhas_invalidas_de_language_code)
 
 ```
 
-### Verificando a língua
+Fazendo o gráfico de barras para ver a variação dessas linguagens, obtemos o seguinte resultado: 
 
 ```{r}
 
@@ -112,7 +118,9 @@ summary(livros)
 
 ```
 
-50% das observações estão entre [0,3.96] e o 1º Q é 3.77, que é bem próximo, mostrando que há uma concentração de avaliações, verificando o histograma dessa variável temos:
+* Separando os grupos 
+
+Temos 50% das observações estão entre [0,3.96] e o 1º Q é 3.77, que é bem próximo, mostrando que há uma concentração de avaliações, verificando o histograma dessa variável temos:
 
 ```{r}
 livros %>% 
@@ -124,6 +132,7 @@ livros %>%
 ```
 
 E conferindo a quantidade de observações menores de 3 temos:
+
 ```{r}
 livros %>% 
   filter(average_rating<3.5) %>% 
@@ -156,7 +165,7 @@ livros %>%
   group_by(book_rating) %>% 
   count()
 
-#####Salvando os dados atuais#####
+# Salvando os dados atuais
 
 write.csv(livros, 
           "./Conjunto de Dados/books_t.csv",
@@ -167,7 +176,9 @@ write.csv(livros,
 
 ## Análise Descritiva e Exploratória
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
+
+# Carregando conjunto de dados após a limpeza
 
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
                    encoding = "UTF-8") %>% 
@@ -178,9 +189,10 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
                             levels = c("Ótimo","Bom","Ruim")))
 ```
 
-### Separando em Treino e Teste
+* Separando em Treino e Teste
 
 ```{r}
+
 set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
 
 livros_split <- initial_split(livros, prop = .75, strata = book_rating)
@@ -191,7 +203,7 @@ livros_teste <- testing(livros_split)
 
 ```
 
-### Verificando a correlação das variáveis quantitativas
+* Verificando a correlação das variáveis quantitativas
 
 ```{r}
 
@@ -215,6 +227,7 @@ cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
     use = "complete", method = "spearman")
 ```
 
+Com essa nova variável tivemos uma  baixa correlação, assim evitamos a multicolineariedade.
 
 ```{r message=FALSE, warning=FALSE}
 livros_treino %>% 
@@ -232,6 +245,7 @@ livros_treino %>%
 ```
 
 Pelos box-plots é notado que as distribuições das classificações de acordo com as variáveis há poucas diferenças entre si. 
+
 ```{r message=FALSE, warning=FALSE}
 grafico_otimos_mes_ano <- livros_treino %>% 
   mutate(book_rating = book_rating == "Ótimo") %>% 
@@ -249,9 +263,9 @@ grafico_otimos_mes_ano <- livros_treino %>%
 
 ```
 
-É observado que há uma maior avaliação de livros a partir dos anos 80 até em torno do ano de 2012.Nesses anos tiveram muitas avaliações de livros e a porcentagem de avaliação para ótimo está em torno de 25% a 75% em sua maioria.
+É observado que há uma maior avaliação de livros a partir dos anos 80 até em torno do ano de 2012. Nesses anos tiveram muitas avaliações de livros e a porcentagem de avaliação para ótimo está em torno de 25% a 75% em sua maioria.
 
-Verificando a distribuição de livros publicados ao longo dos anos temos
+Verificando a distribuição de livros publicados ao longo dos anos temos:
 
 ```{r}
 livros_treino %>%  
@@ -339,8 +353,6 @@ livros_treino %>%
 
 Com as mudanças feitas, houve uma diferença notável nas distribuições da idade do livro, número de páginas e avaliações, as amplitudes e variações em comparação aos box-plots anteriores.
 As contagens de avaliações, na classificação ótimas a amplitude e a variação é maior que as demais, se assemelha a classificação "Bom", "Ruim" é a que possui mais outliers mas sua amplitude e vaiação é a menor.
-
-
 
 # Modelagem
 
