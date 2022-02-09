@@ -414,7 +414,7 @@ head(prep(livros_rec) %>%
        bake(new_data =NULL))
 ```
 
-O pré-processamento de dados desempenha papel importante no *XGboost*, mas necessita de menos atenção do que outros algoritmos de classificação, isso porque ele desempenha melhor com dados esparsos do que outros, sendo inclusive capaz de desempenhar melhor mesmo com dados faltantes e sem normalizar os dados. 
+O pré-processamento de dados desempenha papel importante no *XGboost*, mas necessita de menos atenção do que outros algoritmos de classificação, isso porque ele desempenha melhor com dados esparsos do que outros, sendo inclusive capaz de desempenhar mesmo com dados faltantes e sem normalizar os dados. 
 
 No entanto, assim como outros métodos de aprendizagem supervisionado, ele apresenta melhor desempenho quando as observações estão balanceadas, ou seja, com a mesma quantidade de observações por categoria, motivo pelo qual optamos por incluir o `step_downsample()` nessa etapa, e dado que temos muitas variáveis _dummy_, devido  escolha de usarmos o mês como uma variável preditora, o `step_zv()` ajudou a "limpar" as variáveis que contém apenas um único valor. 
 
