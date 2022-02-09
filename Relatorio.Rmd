@@ -490,17 +490,22 @@ Além disso, a vantagem dos passos descritos anteriormente e o que se torna um d
 
 ### Avaliação do Modelo
 
+Com o plot das métricas do modelo, focamos apenas na `mn_log_loss` onde nos mostra o comportamento de apredizagem do modelo classificando o momento de parada, pois assim que era percebe que após testar o modelo não há mais avanços na aprendizagem ele para. 
+
 ```{r}
 autoplot(stopping_rs)
 ```
 
 
 ```{r}
+
 show_best(stopping_rs, metric = "mn_log_loss")
 
 show_best(stopping_rs, metric = "accuracy")
 
 show_best(stopping_rs, metric = "roc_auc")
+
+melhores <- show_best(stopping_rs, metric = "mn_log_loss")
 
 stopping_fit <- early_stop_wf %>%
   finalize_workflow(select_best(stopping_rs, "roc_auc")) %>%
@@ -522,15 +527,13 @@ extract_workflow(stopping_fit) %>%
 
 ```
 
-As variáveis mais importantes para o modelo são os número de páginas, contagem de avaliações, comentários de textos e a idade do livro.
+As variáveis mais importantes para o modelo são os número de páginas, contagem de avaliações, comentários de textos e a idade do livro. O que faz sentido, pois a junção dessas variáveis para fazer uma classificação é o esperado.
 
-O que faz sentido pois a junção dessas variáveis para fazer uma classificação,
 É difícil ter muitos livros com muitas páginas, conseguir seguir uma linha de raciocínio e uma trama na qual prenda o leitor. Além disso, quanto mais páginas provavelmente mais caro será o livro.
 
-Principalmente,atualmente, a questão de um livro está sendo muito avaliado, muito divulgado nas redes, faz com que mais pessoas queiram consumir eles, tanto pela curiosidade de saber por que ele é tão bem avaliado e descutido.
-Em relação a idade
+Principalmente, atualmente, a questão de um livro está sendo muito avaliado, muito divulgado nas redes, faz com que mais pessoas queiram consumir eles, tanto pela curiosidade de saber por que ele é tão bem avaliado e descutido.
 
-A idade do livro é um fator interessante, há os livros que se tornam clássicos, os que são deixados de lado e os que é possível fazer sucesso mesmo com um certo tempo de publicação.
+Em relação a idade do livro é um fator interessante, há os livros que se tornam clássicos, os que são deixados de lado e os que é possível fazer sucesso mesmo com um certo tempo de publicação.
 
 ```{r}
 
@@ -541,12 +544,7 @@ collect_predictions(stopping_fit) %>%
 
 ```
 
-O modelo não foi o melhor, principalmente para avaliar "Ótimo" e "Bom".
-
-Dos livros classificados como "Ótimo", o modelo classificou 189 como "Bom" e 146 como "Ruim".
-
-Dos livros classificados como "Bom", o modelo classificou 200 como "Ótimo" e 209 como "Ruim".
-
+O modelo não foi o melhor, principalmente para avaliar "Ótimo" e "Bom". Porque dos livros classificados como "Ótimo", o modelo classificou 175 como "Bom" e 152 como "Ruim". Dos livros classificados como "Bom", o modelo classificou 211 como "Ótimo" e 256 como "Ruim".
 
 ```{r}
 
@@ -581,6 +579,19 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
 
 ```
 
+# Conclusões
+
+O modelo não gerou os resultados esperados, mas visto que o a parte da engenharia dos dados é um fator importante, provavelmente isso prejudicou o desempenho, já que foi a parte mais trabalhosa. 
+
+Sendo assim, algumas mudanças poderiam melhorar o modelo, tais como:
+
+1. uma melhora na limpeza dos dados, removendo ainda mais outliers;
+2. melhor definição nos níveis e categorias das variáveis preditoras;
+3. variáveis preditoras mais informativas e com mais distinção entre os níveis.
+ 
+Por fim, não consideramos satisfatório a capacidade preditora do modelo e
+concluímos que a melhor forma de saber se um livro é ótimo, bom ou
+ruim, é lendo-o. 
 
 # Referências:
 

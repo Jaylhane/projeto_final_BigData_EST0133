@@ -25,3 +25,7 @@ yardstick
 lubridate
 vip
 GGally
+rlang
+vctrs
+xgboost
+kableExtra
