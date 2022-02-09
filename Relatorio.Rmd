@@ -356,7 +356,7 @@ As contagens de avaliações, na classificação ótimas a amplitude e a variaç
 
 # Modelagem
 
-Considerando as alterações sofridas no conjunto de dados após a análise exploratória, será necessário carregar novamente o conjunto de dados, bem como gerar novo conjunto de treino e teste:
+Considerando as alterações no conjunto de dados, após a análise exploratória, será necessário carregar novamente o conjunto de dados e gerar novo conjunto de treino e teste:
 
 ```{r}
 livros <- read.csv("./Conjunto de Dados/books_t.csv",
@@ -372,22 +372,25 @@ livros <- read.csv("./Conjunto de Dados/books_t.csv",
   filter(ratings_count<1000)
 
 set.seed(1904, kind = "Mersenne-Twister", normal.kind = "Inversion")
-
 livros_split <- initial_split(livros, prop = .75, strata = book_rating)
 
 livros_treino <- training(livros_split)
 
 livros_teste <- testing(livros_split)
 
-#####Criando Métricas#####
-
-(livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss))
-
 #####Criando Folds#####
 
 set.seed(1989)
 (livros_folds <- vfold_cv(livros_treino, strata = book_rating, v=10))
+
+#####Criando Métricas#####
+
+(livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss))
 ```
+
+Para _tunar_ o modelo, além de criar os folds é necessário também estabelecer as metricas, isso pq enquanto um método gradiente 
+
+As métricas foram carregadas
 
 ### Pre-processamento dos Dados
 
