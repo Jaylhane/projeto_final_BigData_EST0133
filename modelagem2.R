@@ -47,8 +47,6 @@ livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
             keep_original_cols = FALSE) %>%
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
   step_zv(all_predictors()) %>% 
-  #step_pca(all_predictors(),threshold = .80) %>% 
-  step_normalize(all_numeric_predictors()) %>% 
   prep()
 
 prep(livros_rec) %>% 
