@@ -14,11 +14,7 @@ header-includes:
   - \setlength\parindent{22pt}
   
 df_print: paged
-output:
-  pdf_document:
-    df_print: paged
-  html_document:
-    df_print: paged
+output: pdf_document
 ---
 
 
@@ -43,7 +39,6 @@ library(knitr)
 opts_chunk$set(message=FALSE, 
                warning=FALSE,
                echo = TRUE,
-               #results="asis",
                cache = TRUE,
                dev = "png",
                dpi = 500)
@@ -217,12 +212,9 @@ livros_teste <- testing(livros_split)
 * Verificando a correlação das variáveis quantitativas
 
 ```{r}
-
-
 livros_treino %>% 
   select(where(is.numeric)) %>% 
   ggpairs(upper = list(continuous = wrap("cor", method = "spearman")))
-
 ```
 
 Dado que identificamos alta correlação entre as variáveis `text_reviews_count`e `rating_count` a variável text será removida pois não necessariamente todo mundo que dá uma nota de avaliação também deixa uma avaliação escrita, o que inclusive explica a forte correlação entre essas variáveis, pois certamente todos que deixaram avaliação escrita também deixaram nota, no entanto, consideramos essa medida importante para avaliar se o livro é ótimo ou ruim, supondo que quando um livro for uma dessas duas opções as pessoas façam mais questão de comentar. 
@@ -497,16 +489,11 @@ autoplot(stopping_rs)
 ```
 
 
-```{r}
-
+```{r, results='hold', eval=TRUE}
 show_best(stopping_rs, metric = "mn_log_loss")
+```
 
-show_best(stopping_rs, metric = "accuracy")
-
-show_best(stopping_rs, metric = "roc_auc")
-
-melhores <- show_best(stopping_rs, metric = "mn_log_loss")
-
+```{r}
 stopping_fit <- early_stop_wf %>%
   finalize_workflow(select_best(stopping_rs, "roc_auc")) %>%
   last_fit(livros_split)
@@ -523,8 +510,6 @@ extract_workflow(stopping_fit) %>%
   extract_fit_parsnip() %>%
   vip(num_features = 15, geom = "point")+
   ggtitle("Variáveis mais importantes no modelo")
-
-
 ```
 
 As variáveis mais importantes para o modelo são os número de páginas, contagem de avaliações, comentários de textos e a idade do livro. O que faz sentido, pois a junção dessas variáveis para fazer uma classificação é o esperado.
@@ -574,9 +559,6 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
   group_by(.level) %>% 
   summarise(mean_sens=mean(sensitivity),
             mean_spec=mean(specificity))
-
-
-
 ```
 
 # Conclusões
