@@ -544,6 +544,10 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
 
 ```
 
+O que percebemos olhando a curva ROC é que o modelo não está predizendo bem e está cometendo erros em falsos positvos e negativos.
+Tanto a categoria "Bom" e "Ruim" estão com curvas próximas, mostrando que ele está acertando mais que errando essas classificações, mas a sensibilidade está em torno de 0.5 a 0.6.
+A categoria "Ótimo" pela curva mostra que a probabilidade do modelo errar é maior  que ele acertar, por isso a curva está abaixo.
+
 ```{r}
 
 ## Verdadeiro positivo
@@ -560,7 +564,9 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
   summarise(mean_sens=mean(sensitivity),
             mean_spec=mean(specificity))
 ```
-
+ Pelas métricas observamos que a sensibilidade para ótimo está em 0.43, o que mostra que o modelo está acertando a categoria "ótimo" em 43% dos casos, que é baixo.
+ Pela sensibilidade que é 0.7, o modelo está classificando como "ótimo" sendo que na verdade é "bom" e "ruim" em 70% dos casos, o que é um valor bem alto.
+ 
 # Conclusões
 
 O modelo não gerou os resultados esperados, mas visto que o a parte da engenharia dos dados é um fator importante, provavelmente isso prejudicou o desempenho, já que foi a parte mais trabalhosa. 

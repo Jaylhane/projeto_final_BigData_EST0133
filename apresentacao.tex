@@ -44,13 +44,14 @@
 \AtBeginSubsection{
   \frame{\subsectionpage}
 }
-\usepackage{amsmath,amssymb}
 \usepackage{lmodern}
+\usepackage{amsmath}
 \usepackage{ifxetex,ifluatex}
 \ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
   \usepackage[T1]{fontenc}
   \usepackage[utf8]{inputenc}
   \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
 \else % if luatex or xetex
   \usepackage{unicode-math}
   \defaultfontfeatures{Scale=MatchLowercase}
@@ -547,11 +548,11 @@ Aprendizagem}\label{interauxe7uxf5es-e-taxa-de-aprendizagem}}
 \toprule
 mtry & learn\_rate & stop\_iter & mean & n & std\_err & .config\\
 \midrule
-17 & 0.0286 & 17 & 1.069 & 10 & 0.0059 & Preprocessor1\_Model10\\
-14 & 0.0910 & 23 & 1.072 & 10 & 0.0043 & Preprocessor1\_Model09\\
-16 & 0.0046 & 21 & 1.073 & 10 & 0.0050 & Preprocessor1\_Model01\\
-8 & 0.0108 & 40 & 1.073 & 10 & 0.0028 & Preprocessor1\_Model05\\
-12 & 0.0019 & 11 & 1.073 & 10 & 0.0039 & Preprocessor1\_Model04\\
+8 & 0.0108 & 40 & 1.073 & 10 & 0.0045 & Preprocessor1\_Model05\\
+12 & 0.0019 & 11 & 1.079 & 10 & 0.0041 & Preprocessor1\_Model04\\
+11 & 0.0009 & 33 & 1.080 & 10 & 0.0028 & Preprocessor1\_Model03\\
+14 & 0.0910 & 23 & 1.082 & 10 & 0.0034 & Preprocessor1\_Model09\\
+16 & 0.0046 & 21 & 1.082 & 10 & 0.0048 & Preprocessor1\_Model01\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -578,8 +579,8 @@ mtry & learn\_rate & stop\_iter & mean & n & std\_err & .config\\
 \toprule
 .metric & .estimator & .estimate & .config\\
 \midrule
-accuracy & multiclass & 0.4011 & Preprocessor1\_Model1\\
-roc\_auc & hand\_till & 0.6091 & Preprocessor1\_Model1\\
+accuracy & multiclass & 0.4176 & Preprocessor1\_Model1\\
+roc\_auc & hand\_till & 0.6018 & Preprocessor1\_Model1\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -613,23 +614,34 @@ roc\_auc & hand\_till & 0.6091 & Preprocessor1\_Model1\\
 \subsubsection{Se o modelo disser que o livro é ÓTIMO,
 desconfie\ldots{}}\label{se-o-modelo-disser-que-o-livro-uxe9-uxf3timo-desconfie}}
 
-\begin{frame}{Se o modelo disser que o livro é ÓTIMO, desconfie\ldots{}}
+\begin{frame}[fragile]{Se o modelo disser que o livro é ÓTIMO,
+desconfie\ldots{}}
 \begin{itemize}
 \tightlist
 \item
   Algumas métricas:
 \end{itemize}
 
-\begin{table}[H]
-\centering
-\begin{tabular}{llr}
-\toprule
-.metric & .estimator & .estimate\\
-\midrule
-sens & macro & 0.4297\\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{Shaded}
+\begin{Highlighting}[]
+\DocumentationTok{\#\# Verdadeiro positivo}
+\NormalTok{senbilidade\_geral }\OtherTok{\textless{}{-}} \FunctionTok{collect\_predictions}\NormalTok{(stopping\_fit) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{sens}\NormalTok{(book\_rating, .pred\_class)}
+
+\DocumentationTok{\#\# Verdadeiro negativo}
+\NormalTok{especificidade\_geral }\OtherTok{\textless{}{-}} \FunctionTok{collect\_predictions}\NormalTok{(stopping\_fit) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{spec}\NormalTok{(book\_rating, .pred\_class)}
+
+\NormalTok{sens\_e\_spec\_categorias }\OtherTok{\textless{}{-}} \FunctionTok{collect\_predictions}\NormalTok{(stopping\_fit, }\AttributeTok{summarize =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{roc\_curve}\NormalTok{(book\_rating, .pred\_class}\SpecialCharTok{:}\NormalTok{.pred\_Ruim) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{group\_by}\NormalTok{(.level) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{mean\_sens=}\FunctionTok{mean}\NormalTok{(sensitivity),}
+            \AttributeTok{mean\_spec=}\FunctionTok{mean}\NormalTok{(specificity))}
+
+\FunctionTok{kable}\NormalTok{(senbilidade\_geral,}\AttributeTok{booktabs=} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \StringTok{"HOLD\_position"}\NormalTok{, }\AttributeTok{position =} \StringTok{"center"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
 \begin{table}[H]
 \centering
@@ -637,10 +649,35 @@ sens & macro & 0.4297\\
 \toprule
 .metric & .estimator & .estimate\\
 \midrule
-spec & macro & 0.7018\\
+sens & macro & 0.4313\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{kable}\NormalTok{(especificidade\_geral,}\AttributeTok{booktabs=} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \StringTok{"HOLD\_position"}\NormalTok{, }\AttributeTok{position =} \StringTok{"center"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llr}
+\toprule
+.metric & .estimator & .estimate\\
+\midrule
+spec & macro & 0.7002\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{kable}\NormalTok{(sens\_e\_spec\_categorias,}\AttributeTok{booktabs=} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \StringTok{"HOLD\_position"}\NormalTok{, }\AttributeTok{position =} \StringTok{"center"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
 \begin{table}[H]
 \centering
@@ -649,8 +686,8 @@ spec & macro & 0.7018\\
 .level & mean\_sens & mean\_spec\\
 \midrule
 Bom & 0.5144 & 0.5152\\
-Ótimo & 0.5725 & 0.3805\\
-Ruim & 0.6383 & 0.5100\\
+Ótimo & 0.5681 & 0.3833\\
+Ruim & 0.6285 & 0.5108\\
 \bottomrule
 \end{tabular}
 \end{table}

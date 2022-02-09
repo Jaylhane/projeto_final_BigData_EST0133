@@ -512,7 +512,7 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
 
 - Algumas métricas:
 
-```{r, echo=FALSE}
+```{r}
 ## Verdadeiro positivo
 senbilidade_geral <- collect_predictions(stopping_fit) %>% 
   sens(book_rating, .pred_class)
