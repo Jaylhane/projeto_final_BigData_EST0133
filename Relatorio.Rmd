@@ -8,6 +8,8 @@ df_print: paged
 output:
   pdf_document:
     df_print: paged
+  html_document:
+    df_print: paged
 ---
 
 
@@ -229,6 +231,8 @@ cor(livros_treino$prop_text_reviews,livros_treino$ratings_count,
 
 Com essa nova variável tivemos uma  baixa correlação, assim evitamos a multicolineariedade.
 
+* Análise das variávies
+
 ```{r message=FALSE, warning=FALSE}
 livros_treino %>% 
   select(where(is.numeric),book_rating) %>% 
@@ -289,6 +293,8 @@ livros_treino %>%
 
 ```
 
+O aumento das publicações dos livros foram bem proporcionais entre 1986 e 2007, não é perceptível algum mês que se destaque entre os demais. Inclusive até mesmo no ano 2008 em que teve uma redução, ainda assim também foi proporcional entre os meses.
+
 Como o boxplot apresentou muitos outliers e percebemos uma concentração nos dados iremos realizar uns filtros para melhorar a modelagem:
 
 ```{r}
@@ -331,7 +337,8 @@ livros_treino %>%
 )
 ```
 
-[FALAR SOBRE OS HISTOGRAMAS]
+Com os histogramas das variáveis númericas percebemos que a maioria tem uma assimetria a direita, então com isso decidimos aplicar filtros nessas variáveis para diminuir os outliers dos nossos dados. A única variável em que o filtro não será aplicado por não ter a assimetria será a `ratings_count`. 
+
 E agora o novo boxplot com os filtros aplicados:
 
 ```{r}
