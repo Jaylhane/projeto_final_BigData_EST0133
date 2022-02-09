@@ -545,7 +545,9 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
 ```
 
 O que percebemos olhando a curva ROC é que o modelo não está predizendo bem e está cometendo erros em falsos positvos e negativos.
+
 Tanto a categoria "Bom" e "Ruim" estão com curvas próximas, mostrando que ele está acertando mais que errando essas classificações, mas a sensibilidade está em torno de 0.5 a 0.6.
+
 A categoria "Ótimo" pela curva mostra que a probabilidade do modelo errar é maior  que ele acertar, por isso a curva está abaixo.
 
 ```{r}
