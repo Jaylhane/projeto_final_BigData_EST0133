@@ -395,9 +395,9 @@ set.seed(1989)
 (livros_metricas <- metric_set(accuracy, roc_auc, mn_log_loss))
 ```
 
-Para _tunar_ o modelo, além de criar os folds é necessário também estabelecer as metricas, isso pq enquanto um método gradiente 
+Para _tunar_ o modelo, além de criar os folds é necessário também estabelecer as métricas, isso porque enquanto um método gradiente ele também busca maximizar o desempenho do algoritmo e apresentar maior acerto na predição. 
 
-As métricas foram carregadas
+Para isso, é necessário acompanhar as métricas de acordo com a capacidade de classificação do modelo (com a acurácia), a probabilidade de identificar verdadeiros positivos e negativos (com acurva ROC), e a taxa de aprendizagem do algoritmo (acompanhada pelo _log_loss_). 
 
 ### Pre-processamento dos Dados
 
@@ -407,14 +407,16 @@ livros_rec <- recipe(book_rating ~ ., data = livros_treino) %>%
   step_date(publication_date, features = c("month"), 
             keep_original_cols = FALSE) %>%
   step_dummy(all_nominal_predictors(), one_hot = TRUE) %>%
-  step_zv(all_numeric_predictors()) %>% 
-  #step_pca(all_predictors(),threshold = .80) %>% 
+  step_zv(all_predictors()) %>% 
   prep()
 
 head(prep(livros_rec) %>% 
        bake(new_data =NULL))
 ```
 
+O pré-processamento de dados desempenha papel importante no *XGboost*, mas necessita de menos atenção do que outros algoritmos de classificação, isso porque ele desempenha melhor com dados esparsos do que outros, sendo inclusive capaz de desempenhar melhor mesmo com dados faltantes e sem normalizar os dados. 
+
+No entanto, assim como outros métodos de aprendizagem supervisionado, ele apresenta melhor desempenho quando as observações estão balanceadas, ou seja, com a mesma quantidade de observações por categoria, motivo pelo qual optamos por incluir o `step_downsample()` nessa etapa, e dado que temos muitas variáveis _dummy_, devido  escolha de usarmos o mês como uma variável preditora, o `step_zv()` ajudou a "limpar" as variáveis que contém apenas um único valor. 
 
 ### Grid de Procura, Tune e  Parada antecipada
 ```{r}
@@ -448,26 +450,61 @@ stopping_rs <- tune_grid(
 )
 ```
 
+Na etapa de definir o *grid de procura*, *fluxo de trabalho* e *tuning* do modelo, tivemos algumas diferenciações quanto ao conteúdo visto em sala. O primeiro deles foi a *taxa de aprendizagem*, que já vinhamos tendo que lidar com ela desde o momento de definir as métricas, e *critério de parada*. 
+
+Como o *XGboost* apresenta melhor desempenho que os demais algoritmos, como pode ser observado abaixo:
+
+![Vishal Morde, 2019 - XGBoost Algorithm: Long May She Reign!](./Imagens/desempenho_xgboost_comparacao.png){width=75%}
+
+Foi necessário compreender de onde vem essa eficiência, e basicamente é devido a capacidade de aprendizagem de modelo, _mas como o modelo aprende e como acompanhar esse aprendizado_? 
+
+No momento de definir os parâmetros da árvore de decisão é necessário definir a quantidade de ramificações (`trees`) que permitam que o modelo aprenda bem, optamos por 500 pois consideramos uma quantidade grande o suficiente, sem precisar tunar este parâmetro. 
+
+No entanto, é necessário definir os parametros de taxa de aprendizagem, usualmente bons parametros de aprendizagem ficam abaixo de 0.1, de forma que escolhemos 5 niveis para turnar este parametro, assim como valores de 10 a 50 para definir a quantidade de interações antes do critério de parada, essas interações são justamente as interações durante o processo de  "ramificação" da árvore de decisão (não é a quantidade de ramos, mas quantas interações ele realiza na escolha dos ramos, dado que como o algoritmo atua em _paralelização_, ele pode tomar mais de uma decisão quanto a "_árvore_" ao mesmo tempo).
+
+Com relação ao grid de procura, ao invés de utilizarmos um grid regular, conforme visto na disciplina, optamos por um irregular que tentasse "varrer" de forma mais eficiente e mesclada as possibilidade de parâmetro, definindo 10 níveis, uma vez que estipulados 10 fold, assim conseguiriamos para cada fold testar um nível da busca dos parametros. Como resultado teriamos aproximadamente 50 modelos (5 níveis de taxa de aprendizado x 10 folds) para testar nossos parametros. 
+
+Nosso `workflow` carregou a receita e nossas especificações da árvore de decisão, com todos os passos anteriores culminando no `tune` do modelo com todas as especificações, busca de parametros e critérios de parada, que são necessários pois do contrário o *XGBoost* ficará indefinidamente buscando o melhor modelo, sendo que a partir do momento em que a capacidade de aprendizagem diminui (a taxa de `learn_rate` aumenta), ele pode parar. 
+
+Ele consegue verificar se está escolhendo modelos melhores ou piores comparando cada modelo gerado com o seu anterior, isso porque na definição da `boost_tree` ao definirmos `set_engine("xgboost", validation = 0.2)`estamos reservando 20% do conjunto de treino em cada fold para conferir os acertos, é como se fosse estivessemos definindo um novo conjunto de teste dentro do conjunto de treino,
+
+Dessa forma conseguimos responder:
+
+1. _Como o modelo aprende_ ? Verificando a capacidade de acerto comparado ao modelo anterior,
+
+2. _Como acompanhar esse aprendizado_ ? Por meio da métricas de _mn_log_loss_ , enquanto o valor estiver diminuindo o algoritmo estará aprendendo, mas quando o valor de _mn_log_loss_ aumentar com relação ao modelo anterior, então a capacidade de aprendizagem estará diminuindo. 
+
+Sendo assim, podemos definir que o melhor modelo será aquele que apresentar a combinação das três métricas, com as maiores médias de _roc_auc_ e _accuracy_ e a menor taxa de _mn_log_loss_. 
+
+Além disso, a vantagem dos passos descritos anteriormente e o que se torna um diferencial do *XGboost* é que a combinação dos passos descritos anteriormente fazem com que o algoritmo evite o super ajuste (_overfiting_) do modelo ao conjunto de treino. 
+
+
 ### Avaliação do Modelo
 
 ```{r}
 autoplot(stopping_rs)
-
 ```
 
 
 ```{r}
-
 show_best(stopping_rs, metric = "mn_log_loss")
 
+show_best(stopping_rs, metric = "accuracy")
+
+show_best(stopping_rs, metric = "roc_auc")
+
 stopping_fit <- early_stop_wf %>%
-  finalize_workflow(select_best(stopping_rs, "mn_log_loss")) %>%
+  finalize_workflow(select_best(stopping_rs, "roc_auc")) %>%
   last_fit(livros_split)
 
 stopping_fit
 
 collect_metrics(stopping_fit)
+```
 
+
+
+```{r}
 extract_workflow(stopping_fit) %>%
   extract_fit_parsnip() %>%
   vip(num_features = 15, geom = "point")+
@@ -518,12 +555,32 @@ collect_predictions(stopping_fit, summarize = FALSE) %>%
 ```{r}
 
 ## Verdadeiro positivo
-collect_predictions(stopping_fit, summarize = TRUE) %>% 
+collect_predictions(stopping_fit) %>% 
   sens(book_rating, .pred_class)
 
 ## Verdadeiro negativo
-collect_predictions(stopping_fit, summarize = TRUE) %>% 
+collect_predictions(stopping_fit) %>% 
   spec(book_rating, .pred_class)
+
+collect_predictions(stopping_fit, summarize = FALSE) %>%
+  roc_curve(book_rating, .pred_class:.pred_Ruim) %>% 
+  group_by(.level) %>% 
+  summarise(mean_sens=mean(sensitivity),
+            mean_spec=mean(specificity))
+
+
 
 ```
 
+
+# Referências:
+
+- MORDE, Vishal. **XGBoost Algorithm: Long May She Reign!** - Abril, 2019. Publicado em _Towards Data Science_. Disponível em: [https://towardsdatascience.com/https-medium-com-vishalmorde-xgboost-algorithm-long-she-may-rein-edd9f99be63d ](https://towardsdatascience.com/https-medium-com-vishalmorde-xgboost-algorithm-long-she-may-rein-edd9f99be63d)
+
+- SILGE, Julia. **Tune xgboost models with early stopping to predict shelter animal status** - Agosto, 2021. Publicado em Julia Silge. Disponível em: [https://juliasilge.com/blog/shelter-animals/](https://juliasilge.com/blog/shelter-animals/)
+
+- R Core Team (2021). **R:_A language and environment for statistical
+  computing_** . R Foundation for Statistical Computing, Vienna, Austria.
+  URL https://www.R-project.org/.
+
+- SOUMIK . **Goodreads-books _comprehensive list of books listed in goodreads_** - Maio, 2019. Publicado em Kagle. Disponível em: [https://www.kaggle.com/jealousleopard/goodreadsbooks](https://www.kaggle.com/jealousleopard/goodreadsbooks)
